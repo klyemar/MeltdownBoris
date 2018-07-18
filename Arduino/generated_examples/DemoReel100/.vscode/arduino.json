@@ -1,5 +1,5 @@
 {
     "sketch": "DemoReel100.ino",
-    "port": "COM4",
+    "port": "COM3",
     "board": "arduino:avr:uno"
 }
