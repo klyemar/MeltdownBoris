@@ -19,6 +19,23 @@ class CMeltdownLED
         return currVal;
     }
 
+    float GetAnalogValue(String inputString, float currVal, int32_t minVal, int32_t maxVal)
+    {
+        if (inputString[0] == '#' && inputString.length() >= 10)
+        {
+            String valString = inputString.substring(5, 9);
+            int rawVal = valString.toInt();
+
+            // A value of 0 indicates an error but is acceptable if the intended value is actually 0.
+            if (rawVal != 0 || valString.equals("0000"))
+            {
+                return map(rawVal, 0, 1023, minVal, maxVal);
+            }
+        }
+
+        return currVal;
+    }
+
     // Because an analog read can waiver between values, we need to determine if an analog value has changed enough
     // for us to do anything about.
     bool HasChanged(float oldVal, float newVal, int32_t minVal, int32_t maxVal)
