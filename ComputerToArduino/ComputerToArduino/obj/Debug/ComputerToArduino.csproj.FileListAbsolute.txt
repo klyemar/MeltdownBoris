@@ -1,0 +1,13 @@
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.exe.manifest
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.application
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.exe
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.pdb
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.Properties.Resources.resources
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.csproj.GenerateResource.Cache
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.csproj.CoreCompileInputs.cache
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.exe.manifest
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.application
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.exe
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.pdb
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.csprojResolveAssemblyReference.cache
+C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.ArduinoForm.resources
