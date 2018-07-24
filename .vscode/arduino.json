@@ -1,0 +1,6 @@
+{
+    "port": "COM5",
+    "board": "arduino:avr:mega",
+    "configuration": "cpu=atmega2560",
+    "sketch": "meltdown_2018\\Boris.ino"
+}

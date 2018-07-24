@@ -16,17 +16,17 @@ FASTLED_USING_NAMESPACE
 #define HUE_PIN -1
 
 #define LED_TYPE WS2812B
-#define NUM_LEDS 129
+#define NUM_LEDS 429
 #define NUM_LEDS_WHEEL 69
 #define NUM_LEDS_SPOKE 60
 #define NUM_SETS 3
-#define LEDS_PER_SET 25
+#define LEDS_PER_SET 69
 #define NUM_SUPERSET_LEDS (NUM_SETS * LEDS_PER_SET)
 CRGBArray<NUM_LEDS> leds;
 
-CRGBSet leds1 = leds(0, 24);
-CRGBSet leds2 = leds(50, 74);
-CRGBSet leds3 = leds(100, 124);
+CRGBSet leds1 = leds(0, 68);
+CRGBSet leds2 = leds(129, 197);
+CRGBSet leds3 = leds(258, 326);
 
 CRGBSet ledSuperSet[3] = { leds1, leds2, leds3 };
 
