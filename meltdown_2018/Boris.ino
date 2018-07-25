@@ -9,34 +9,44 @@ FASTLED_USING_NAMESPACE
 // This project builds off of the FastLED library and some of its existing patterns
 // and examples.
 
-#define DATA_PIN 2
-#define SWITCH_PIN 13
+#define DATA_PIN_1 2
+#define DATA_PIN_2 3
+#define DATA_PIN_3 4
+#define DATA_PIN_4 5
+
+#define PATTERN_PIN 13
 #define BRIGHTNESS_PIN -1
 #define FPS_PIN -1
 #define HUE_PIN -1
 
 #define LED_TYPE WS2812B
-#define NUM_LEDS 429
 #define NUM_LEDS_WHEEL 69
 #define NUM_LEDS_SPOKE 60
-#define NUM_SETS 3
-#define LEDS_PER_SET 69
-#define NUM_SUPERSET_LEDS (NUM_SETS * LEDS_PER_SET)
-CRGBArray<NUM_LEDS> leds;
+#define NUM_LEDS_STRIP (NUM_LEDS_WHEEL + NUM_LEDS_SPOKE)
+#define NUM_SETS 4
+#define NUM_WHEEL_SETS_LEDS (NUM_SETS * NUM_LEDS_WHEEL)
+#define NUM_SPOKE_SETS_LEDS (NUM_SETS * NUM_LEDS_SPOKE)
+CRGBArray<NUM_LEDS_STRIP> leds1;
+CRGBArray<NUM_LEDS_STRIP> leds2;
+CRGBArray<NUM_LEDS_STRIP> leds3;
+CRGBArray<NUM_LEDS_STRIP> leds4;
 
-CRGBSet leds1 = leds(0, 68);
-CRGBSet leds2 = leds(129, 197);
-CRGBSet leds3 = leds(258, 326);
+CRGBSet wheelLeds1 = leds1(0, NUM_LEDS_WHEEL - 1);
+CRGBSet wheelLeds2 = leds2(0, NUM_LEDS_WHEEL - 1);
+CRGBSet wheelLeds3 = leds3(0, NUM_LEDS_WHEEL - 1);
+CRGBSet wheelLeds4 = leds4(0, NUM_LEDS_WHEEL - 1);
 
-CRGBSet ledSuperSet[3] = { leds1, leds2, leds3 };
+CRGBSet spokeLeds1 = leds1(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+CRGBSet spokeLeds2 = leds2(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+CRGBSet spokeLeds3 = leds3(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+CRGBSet spokeLeds4 = leds4(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+
+CRGBSet ledWheelSets[] = { wheelLeds1, wheelLeds2, wheelLeds3, wheelLeds4 };
+CRGBSet ledSpokeSets[] = { spokeLeds1, spokeLeds2, spokeLeds3, spokeLeds4 };
 
 // Serial input commands.
 String inputString = "";
 boolean inputStringComplete = false; // whether the String is complete
-
-// Button input.
-int buttonState = 0;         
-bool canChangeState = true;
 
 // Global LED values.
 uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
@@ -62,12 +72,15 @@ void setup()
     delay(3000); // 3 second delay for recovery
 
     // tell FastLED about the LED strip configuration
-    FastLED.addLeds<LED_TYPE, DATA_PIN>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, DATA_PIN_1>(leds1, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, DATA_PIN_2>(leds2, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, DATA_PIN_3>(leds3, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<LED_TYPE, DATA_PIN_4>(leds4, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
 
     // set master brightness control
     FastLED.setBrightness(gBrightness);
 
-    pinMode(SWITCH_PIN, INPUT);
+    pinMode(PATTERN_PIN, INPUT);
 }
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
@@ -76,22 +89,21 @@ SimplePatternList gPatterns = {rainbow, rainbowWithGlitter, confetti, sinelon, b
 
 void loop()
 {
+    checkButtonStates();
+
     tryExecuteCommand();
 
-    if (gInverse)
-    {
-        invert();
-    }
+    if (gInverse) invert();
 
     if (!gPause)
     {
         // Wheel pattern.
         // Call the current pattern function once, updating the 'leds' array
-        gPatterns[gCurrentPatternNumber](ledSuperSet, NUM_SUPERSET_LEDS);
+        gPatterns[gCurrentPatternNumber](ledWheelSets, NUM_LEDS_WHEEL);
         
-        // // Spoke pattern.
-        // // Call the current pattern function once, updating the 'leds' array
-        // gPatterns[getNextPatternNumber()](leds(NUM_LEDS_WHEEL, NUM_LEDS - 1), NUM_LEDS_SPOKE);
+        // Spoke pattern.
+        // Call the current pattern function once, updating the 'leds' array
+        //gPatterns[getNextPatternNumber()](ledSpokeSets, NUM_SPOKE_SETS_LEDS);
 
         // send the 'leds' array out to the actual LED strip
         FastLED.show();
@@ -99,19 +111,6 @@ void loop()
 
     // insert a delay to keep the framerate modest
     FastLED.delay(1000 / gFps);
-
-    // read the state of the pushbutton value:
-    buttonState = digitalRead(SWITCH_PIN);
-    // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
-    if (buttonState == LOW && canChangeState) 
-    {
-        nextPattern();
-        canChangeState = false;
-    }
-    else if (buttonState == HIGH && !canChangeState)
-    {
-        canChangeState = true;
-    }
 
     // do some periodic updates
     // EVERY_N_MILLISECONDS(20) { gHue++; }   // slowly cycle the "base color" through the rainbow
@@ -131,42 +130,37 @@ void nextPattern()
     gCurrentPatternNumber = getNextPatternNumber();
 }
 
-float getAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
-{
-    float val = currVal;
-    
-    if (!inputString.equals(""))
-        val = MeltdownLED.GetAnalogValue(inputString, currVal, minVal, maxVal);
-    else
-        val = MeltdownLED.GetAnalogValue(pin, currVal, minVal, maxVal);
-
-    Serial.println(val);
-
-    return val;
-}
+#pragma region SET MODIFIERS
 
 void setBrightness()
 {
-    Serial.print("Setting Brightness: ");
     gBrightness = getAnalogValue(BRIGHTNESS_PIN, gBrightness, 0, 100);
-
     FastLED.setBrightness(gBrightness);
+
+    #if DEBUG
+        Serial.print("Setting Brightness: ");
+        Serial.println(gBrightness);
+    #endif
 }
 
 void setInverse()
 {
     gInverse = getBoolValue();
 
-    Serial.print("Setting Inverse: ");
-    Serial.println(gInverse);
+    #if DEBUG
+        Serial.print("Setting Inverse: ");
+        Serial.println(gInverse);
+    #endif
 }
 
 void setFps(int overrideVal = -1)
 {
     gFps = getAnalogValue(FPS_PIN, gFps, 500, 5000);
-    
-    Serial.print("Setting FPS: ");
-    Serial.println(gFps);
+
+    #if DEBUG
+        Serial.print("Setting FPS: ");
+        Serial.println(gFps);
+    #endif
 }
 
 void setHue(int overrideVal = -1)
@@ -180,8 +174,10 @@ void setHue(int overrideVal = -1)
 
     gHue = map(val, 0, 6, 0, 255);
 
-    Serial.print("Setting Hue: ");
-    Serial.println(gHue);
+    #if DEBUG
+        Serial.print("Setting Hue: ");
+        Serial.println(gHue);
+    #endif
 }
 
 void setBlur(int overrideVal = -1)
@@ -198,14 +194,20 @@ void setPause(bool isPaused)
 {
     gPause = isPaused;
 
-    Serial.print("Setting Pause: ");
-    Serial.println(gPause);
+    #if DEBUG
+        Serial.print("Setting Pause: ");
+        Serial.println(gPause);
+    #endif
 }
+
+#pragma endregion SET MODIFIERS
+
+#pragma region PATTERNS
 
 void rainbow(CRGBSet ledSets[], int numLeds)
 {
     // FastLED's built-in rainbow generator
-    fillRainbow(ledSets, NUM_SETS, LEDS_PER_SET, gHue, 7);
+    fillRainbow(ledSets, numLeds, gHue, 7);
 }
 
 void rainbowWithGlitter(CRGBSet ledSets[], int numLeds)
@@ -219,25 +221,25 @@ void addGlitter(fract8 chanceOfGlitter, CRGBSet ledSets[], int numLeds)
 {
     if (random8() < chanceOfGlitter)
     {
-        *getLed(ledSets, random16(numLeds)) += CRGB::White;
+        *getLed(ledSets, random16(numLeds), numLeds) += CRGB::White;
     }
 }
 
 void confetti(CRGBSet ledSets[], int numLeds)
 {
     // random colored speckles that blink in and fade smoothly
-    fadeSetsToBlackBy(ledSets, NUM_SETS, LEDS_PER_SET, 10);
+    fadeSetsToBlackBy(ledSets, numLeds, 10);
 
-    int pos = random16(numLeds);
-    *getLed(ledSets, pos) += CHSV(gHue + random8(64), 200, 255);
+    int pos = random16(numLeds * NUM_SETS);
+    *getLed(ledSets, pos, numLeds) += CHSV(gHue + random8(64), 200, 255);
 }
 
 void sinelon(CRGBSet ledSets[], int numLeds)
 {
-    fadeSetsToBlackBy(ledSets, NUM_SETS, LEDS_PER_SET, 20);
+    fadeSetsToBlackBy(ledSets, numLeds, 20);
 
-    int pos = beatsin16(13, 0, numLeds - 1);
-    *getLed(ledSets, pos) += CHSV(gHue, 255, 192);
+    int pos = beatsin16(13, 0, (numLeds * NUM_SETS) - 1);
+    *getLed(ledSets, pos, numLeds) += CHSV(gHue, 255, 192);
 }
 
 void bpm(CRGBSet ledSets[], int numLeds)
@@ -246,62 +248,111 @@ void bpm(CRGBSet ledSets[], int numLeds)
     uint8_t BeatsPerMinute = 62;
     CRGBPalette16 palette = PartyColors_p;
     uint8_t beat = beatsin8(BeatsPerMinute, 64, 255);
-    for (int i = 0; i < numLeds; i++)
+    for (int i = 0; i < numLeds * NUM_SETS; i++)
     { //9948
-        *getLed(ledSets, i) = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+        *getLed(ledSets, i, numLeds) = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
     }
 }
 
 void juggle(CRGBSet ledSets[], int numLeds)
 {
     // eight colored dots, weaving in and out of sync with each other
-    fadeSetsToBlackBy(ledSets, NUM_SETS, LEDS_PER_SET, 20);
+    fadeSetsToBlackBy(ledSets, numLeds, 20);
 
     byte dothue = 0;
     for (int i = 0; i < 8; i++)
     {
-        *getLed(ledSets, beatsin16(i + 7, 0, numLeds - 1)) |= CHSV(dothue, 200, 255);
+        int pos = beatsin16(i + 7, 0, (numLeds * NUM_SETS) - 1);
+        *getLed(ledSets, pos, numLeds) |= CHSV(dothue, 200, 255);
         dothue += 32;
     }
 }
 
 void invert()
 {
-    if (gInverse)
-    {
-        for (int i = 0; i < NUM_LEDS; i++)
-        {
-            leds[i] = -leds[i];
-        }
-    }
+    // if (gInverse)
+    // {
+    //     for (int i = 0; i < NUM_LEDS; i++)
+    //     {
+    //         leds[i] = -leds[i];
+    //     }
+    // }
 }
 
-void fadeSetsToBlackBy(CRGBSet ledSets[], uint8_t numSets, uint16_t numLeds, uint8_t fade)
+void fadeSetsToBlackBy(CRGBSet ledSets[], uint16_t numLeds, uint8_t fade)
 {
-    for (int i = 0; i < numSets; i++)
+    for (int i = 0; i < NUM_SETS; i++)
     {
         fadeToBlackBy(ledSets[i], numLeds, 20);
     }
 }
 
-void fillRainbow(CRGBSet ledSets[], uint8_t numSets, uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
+void fillRainbow(CRGBSet ledSets[], uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
 {
-    for (int i = 0; i < numSets; i++)
+    for (int i = 0; i < NUM_SETS; i++)
     {
         fill_rainbow(ledSets[i], numLeds, initialHue, deltaHue);
     }
 }
 
-CRGB* getLed(CRGBSet ledSets[], int index)
+#pragma endregion PATTERNS
+
+#pragma region INPUTS
+
+// Button input.
+int patternState = 0;         
+bool canChangePatternState = true;
+
+void checkButtonStates()
+{
+    checkButtonState(PATTERN_PIN, &patternState, &canChangePatternState, nextPattern);
+}
+
+void checkButtonState(uint8_t pin, int *buttonState, bool *canChangeState, void (*func)())
+{
+    // Read the state of the button pin.
+    *buttonState = digitalRead(pin);
+    // Check if the button is pressed. If it is, the buttonState is HIGH.
+    if (*buttonState == LOW && *canChangeState) 
+    {
+        func();
+        *canChangeState = false;
+    }
+    else if (*buttonState == HIGH && !*canChangeState)
+    {
+        *canChangeState = true;
+    }
+}
+
+float getAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
+{
+    float val = currVal;
+    
+    if (!inputString.equals(""))
+        val = MeltdownLED.GetAnalogValue(inputString, currVal, minVal, maxVal);
+    else
+        val = MeltdownLED.GetAnalogValue(pin, currVal, minVal, maxVal);
+}
+
+#pragma endregion INPUTS
+
+CRGB* getLed(CRGBSet ledSets[], int index, uint16_t numLeds)
 {
     for (int i = 0; i < NUM_SETS; i++)
     {
-        if (index < ((i + 1) * LEDS_PER_SET))
+        if (index < ((i + 1) * numLeds))
         {
-            return &ledSets[i][index - (i * LEDS_PER_SET)];
+            return &ledSets[i][index - (i * numLeds)];
         }
     }
 }
+
+int getLedsPerSet(uint16_t numLeds)
+{
+    return numLeds / NUM_SETS;
+}
+
+#pragma region COMMANDS
 
 void tryExecuteCommand()
 {
@@ -409,3 +460,5 @@ void serialEvent()
         }
     }
 }
+
+#pragma endregion COMMANDS
