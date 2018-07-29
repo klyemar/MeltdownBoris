@@ -15,25 +15,21 @@
 #define BRIGHTNESS_PIN -1
 #define FPS_PIN -1
 #define HUE_PIN -1
+#define FADE_PIN -1
 
 #define LED_TYPE OCTOWS2811
+#define NUM_SETS 8
+#define NUM_STRIPS_PER_SET 1
 #define NUM_LEDS_PER_WHEEL 69
 #define NUM_LEDS_PER_SPOKE 60
 #define NUM_LEDS_PER_STRIP (NUM_LEDS_PER_WHEEL + NUM_LEDS_PER_SPOKE)
-#define NUM_SETS 3
-#define NUM_STRIPS_PER_SET 3
 #define NUM_LEDS_PER_SET (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_SET)
-#define NUM_WHEEL_SETS_LEDS (NUM_SETS * NUM_LEDS_PER_WHEEL)
-#define NUM_SPOKE_SETS_LEDS (NUM_SETS * NUM_LEDS_PER_SPOKE)
 #define NUM_LEDS (NUM_SETS * NUM_LEDS_PER_SET)
 
 CRGB leds[NUM_LEDS];
 
 CRGB *ledWheelSets[NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_SET][NUM_SETS];
 CRGB *ledSpokeSets[NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_SET][NUM_SETS];
-
-// CRGB ledWheelSets[] = { wheelLeds1 };
-// CRGB ledSpokeSets[] = { spokeLeds1 };
 
 // Serial input commands.
 String inputString = "";
@@ -44,6 +40,7 @@ uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gBrightness = 96;
 uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
 uint16_t gFps = 1000;
+float gFade = 20;
 bool gHue1 = false;
 bool gHue2 = false;
 bool gHue3 = false;
@@ -58,7 +55,7 @@ void setup()
     Serial.begin(9600);
     inputString.reserve(100);
 
-    Serial.print("Serial port opened.");
+    Serial.println("Serial port opened.");
     
     delay(3000); // 3 second delay for recovery
     LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_SET);
@@ -68,7 +65,7 @@ void setup()
 
     setupLedArrays();
 
-    pinMode(PATTERN_PIN, INPUT);
+    // pinMode(PATTERN_PIN, INPUT);
 }
 
 void setupLedArrays()
@@ -92,6 +89,14 @@ void setupLedArrays()
 
             for (int k = 0; k < NUM_LEDS_PER_SPOKE; k++)
             {
+                #if DEBUG
+                    Serial.print("ledSpokeSets[");
+                    Serial.print((j * NUM_LEDS_PER_SPOKE) + k);
+                    Serial.print("][");
+                    Serial.print(i);
+                    Serial.print("]: ");
+                    Serial.println((i * NUM_LEDS_PER_SET) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
+                #endif
                 ledSpokeSets[(j * NUM_LEDS_PER_SPOKE) + k][i] = &leds[(i * NUM_LEDS_PER_SET) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
             }
         }
@@ -106,50 +111,26 @@ void loop()
 {
     // checkButtonStates();
 
-    // tryExecuteCommand();
+    tryExecuteCommand();
 
-    // if (gInverse) invert();
+    if (!gPause)
+    {
+        // Wheel pattern.
+        // Call the current pattern function once, updating the 'leds' array
+        gPatterns[gCurrentPatternNumber](ledWheelSets, NUM_LEDS_PER_WHEEL);
 
-    // if (!gPause)
-    // {
-    //     // Wheel pattern.
-    //     // Call the current pattern function once, updating the 'leds' array
-    //     gPatterns[gCurrentPatternNumber](ledWheelSets, NUM_LEDS_PER_STRIP);
+        if (gInverse) invert();
         
-    //     // Spoke pattern.
-    //     // Call the current pattern function once, updating the 'leds' array
-    //     //gPatterns[getNextPatternNumber()](ledSpokeSets, NUM_SPOKE_SETS_LEDS);
+        // Spoke pattern.
+        // Call the current pattern function once, updating the 'leds' array
+        gPatterns[getNextPatternNumber()](ledSpokeSets, NUM_LEDS_PER_SPOKE);
 
-    //     // send the 'leds' array out to the actual LED strip
-    //     LEDS.show();
-    // }
-
-    // // insert a delay to keep the framerate modest
-    // // LEDS.delay(1000 / gFps);
-    // LEDS.delay(10);
-
-    // do some periodic updates
-    // EVERY_N_MILLISECONDS(20) { gHue++; }   // slowly cycle the "base color" through the rainbow
-    // EVERY_N_SECONDS(10) { nextPattern(); } // change patterns periodically
-
-    static uint8_t hue = 0;
-    for(int i = 0; i < NUM_SETS; i++) {
-        for(int j = 0; j < NUM_LEDS_PER_STRIP; j++) {
-        leds[(i*NUM_LEDS_PER_SET) + j] = CHSV((32*i) + hue+j,192,255);
-        }
+        // send the 'leds' array out to the actual LED strip
+        LEDS.show();
     }
 
-    // Set the first n leds on each strip to show which strip it is
-    for(int i = 0; i < NUM_SETS; i++) {
-        for(int j = 0; j <= i; j++) {
-        leds[(i*NUM_LEDS_PER_SET) + j] = CRGB::Red;
-        }
-    }
-
-    hue++;
-
-    LEDS.show();
-    LEDS.delay(10);
+    // insert a delay to keep the framerate modest
+    LEDS.delay(1000 / gFps);
 }
 
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
@@ -162,9 +143,13 @@ int getNextPatternNumber()
 void nextPattern()
 {
     // Set to black.
-    setColor(CRGB::Black, ledWheelSets, NUM_LEDS_PER_WHEEL);
+    setColor(CRGB::Black);
     // add one to the current pattern number, and wrap around at the end
     gCurrentPatternNumber = getNextPatternNumber();
+
+    #if DEBUG
+        Serial.println("Next Pattern...");
+    #endif
 }
 
 #pragma region SET MODIFIERS
@@ -190,7 +175,7 @@ void setInverse()
     #endif
 }
 
-void setFps(int overrideVal = -1)
+void setFps()
 {
     gFps = getAnalogValue(FPS_PIN, gFps, 500, 5000);
 
@@ -200,7 +185,7 @@ void setFps(int overrideVal = -1)
     #endif
 }
 
-void setHue(int overrideVal = -1)
+void setHue()
 {
     int val = 0;
     if (gHue1) val++;
@@ -217,12 +202,17 @@ void setHue(int overrideVal = -1)
     #endif
 }
 
-void setBlur(int overrideVal = -1)
+void setFade()
 {
-    
+    gFade = getAnalogValue(FADE_PIN, gFade, 3, 100);
+
+    #if DEBUG
+        Serial.print("Setting Fade: ");
+        Serial.println(gFade);
+    #endif
 }
 
-void setPosition(int overrideVal = -1)
+void setPosition()
 {
 
 }
@@ -241,21 +231,18 @@ void setPause(bool isPaused)
 
 #pragma region PATTERNS
 
-void setColor(CRGB::HTMLColorCode color, CRGB *ledSets[][NUM_SETS], int numLeds)
+void setColor(CRGB::HTMLColorCode color)
 {
-    for (int i = 0; i < NUM_SETS; i++)
+    for (int i = 0; i < NUM_LEDS; i++)
     {
-        for (int j = 0; j < NUM_LEDS_PER_SET; j++)
-        {
-            *getLed(ledSets, i, j, numLeds) = color;
-        }
+        leds[i] = color;
     }
 }
 
 void rainbow(CRGB *ledSets[][NUM_SETS], int numLeds)
 {
     // FastLED's built-in rainbow generator
-    fillRainbow(ledSets, NUM_LEDS, gHue, 7);
+    fillRainbow(ledSets, numLeds, gHue, 7);
 }
 
 void rainbowWithGlitter(CRGB *ledSets[][NUM_SETS], int numLeds)
@@ -271,7 +258,7 @@ void addGlitter(fract8 chanceOfGlitter, CRGB *ledSets[][NUM_SETS], int numLeds)
     {
         for (int i = 0; i < NUM_SETS; i++)
         {
-            *getLed(ledSets, i, random16(numLeds), numLeds) += CRGB::White;
+            *getLed(ledSets, i, random16(numLeds * NUM_STRIPS_PER_SET)) += CRGB::White;
         }
     }
 }
@@ -279,23 +266,23 @@ void addGlitter(fract8 chanceOfGlitter, CRGB *ledSets[][NUM_SETS], int numLeds)
 void confetti(CRGB *ledSets[][NUM_SETS], int numLeds)
 {
     // random colored speckles that blink in and fade smoothly
-    fadeSetsToBlackBy(ledSets, NUM_LEDS, 10);
+    fadeSetsToBlackBy(ledSets, numLeds, 1);
 
-    int pos = random16(numLeds);
+    int pos = random16(numLeds * NUM_STRIPS_PER_SET);
     for (int i = 0; i < NUM_SETS; i++)
     {
-        *getLed(ledSets, i, pos, numLeds) += CHSV(gHue + random8(64), 200, 255);
+        *getLed(ledSets, i, pos) += CHSV(gHue + random8(64), 200, 255);
     }
 }
 
 void sinelon(CRGB *ledSets[][NUM_SETS], int numLeds)
 {
-    fadeSetsToBlackBy(ledSets, NUM_LEDS, 20);
+    fadeSetsToBlackBy(ledSets, numLeds, 2);
 
     int pos = beatsin16(13, 0, (numLeds * NUM_STRIPS_PER_SET) - 1);
     for (int i = 0; i < NUM_SETS; i++)
     {
-        *getLed(ledSets, i, pos, numLeds) += CHSV(gHue, 255, 192);
+        *getLed(ledSets, i, pos) += CHSV(gHue, 255, 192);
     }
 }
 
@@ -305,11 +292,11 @@ void bpm(CRGB *ledSets[][NUM_SETS], int numLeds)
     uint8_t BeatsPerMinute = 62;
     CRGBPalette16 palette = PartyColors_p;
     uint8_t beat = beatsin8(BeatsPerMinute, 64, 255);
-    for (int i = 0; i < numLeds * NUM_STRIPS_PER_SET; i++)
+    for (int i = 0; i < NUM_SETS; i++)
     { //9948
-        for (int j = 0; j < NUM_SETS; j++)
+        for (int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++)
         {
-            *getLed(ledSets, j, i, numLeds) = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+            *getLed(ledSets, i, j) = ColorFromPalette(palette, gHue + (j * 2), beat - gHue + (j* 10));
         }
     }
 }
@@ -317,15 +304,15 @@ void bpm(CRGB *ledSets[][NUM_SETS], int numLeds)
 void juggle(CRGB *ledSets[][NUM_SETS], int numLeds)
 {
     // eight colored dots, weaving in and out of sync with each other
-    fadeSetsToBlackBy(ledSets, NUM_LEDS, 20);
+    fadeSetsToBlackBy(ledSets, numLeds, 2);
 
-    byte dothue = 0;
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < NUM_SETS; i++)
     {
-        int pos = beatsin16(i + 7, 0, (numLeds * NUM_STRIPS_PER_SET) - 1);
-        for (int j = 0; j < NUM_SETS; j++)
+        byte dothue = 0;
+        for (int j = 0; j < 8; j++)
         {
-            *getLed(ledSets, j, pos, numLeds) |= CHSV(dothue, 200, 255);
+            int pos = beatsin16(j + 7, 0, (numLeds * NUM_STRIPS_PER_SET) - 1);
+            *getLed(ledSets, i, pos) |= CHSV(dothue, 200, 255);
         }
         dothue += 32;
     }
@@ -333,30 +320,58 @@ void juggle(CRGB *ledSets[][NUM_SETS], int numLeds)
 
 void invert()
 {
-    // if (gInverse)
-    // {
-    //     for (int i = 0; i < NUM_LEDS; i++)
-    //     {
-    //         leds[i] = -leds[i];
-    //     }
-    // }
+    if (gInverse)
+    {
+        for (int i = 0; i < NUM_LEDS; i++)
+        {
+            leds[i] = -leds[i];
+        }
+    }
 }
 
 void fadeSetsToBlackBy(CRGB *ledSets[][NUM_SETS], uint16_t numLeds, uint8_t fade)
 {
     for (int i = 0; i < NUM_SETS; i++)
     {
-        fadeToBlackBy(*ledSets[i], numLeds, 20);
+        CRGB* ledSet[numLeds * NUM_STRIPS_PER_SET];
+        for (int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++)
+        {
+            ledSet[j] = ledSets[j][i];
+        }
+
+        for( int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++) 
+        {
+            uint8_t scale = 255 - (fade * gFade);
+            (*ledSet[j]).nscale8(scale);
+        }
     }
 }
 
 void fillRainbow(CRGB *ledSets[][NUM_SETS], uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
 {
-    // for (int i = 0; i < NUM_SETS; i++)
-    // {
-    //     fill_rainbow(*ledSets[i], numLeds, initialHue, deltaHue);
-    // }
-    fill_rainbow(leds, NUM_LEDS, initialHue, deltaHue);
+    for (int i = 0; i < NUM_SETS; i++)
+    {
+        CRGB* ledSet[numLeds * NUM_STRIPS_PER_SET];
+        for (int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++)
+        {
+            ledSet[j] = ledSets[j][i];
+        }
+
+        CHSV hsv;
+        hsv.hue = initialHue;
+        hsv.val = 255;
+        hsv.sat = 240;
+        for( int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++) 
+        {
+            *ledSet[j] = hsv;
+            hsv.hue += deltaHue;
+        }
+    }
+}
+
+CRGB* getLed(CRGB *ledSets[][NUM_SETS], int setIndex, int pos)
+{
+    return ledSets[pos][setIndex];
 }
 
 #pragma endregion PATTERNS
@@ -402,23 +417,6 @@ float getAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
 
 #pragma endregion INPUTS
 
-CRGB* getLed(CRGB *ledSets[][NUM_SETS], int setIndex, int pos, uint16_t numLeds)
-{
-    // for (int j = 0; j < NUM_STRIPS_PER_SET; j++)
-    // {
-    //     if (pos < ((j + 1) * numLeds))
-    //     {
-    //         return ledSets[pos % numLeds][j][setIndex];
-    //     }
-    // }
-    return ledSets[pos][setIndex];
-}
-
-int getLedsPerSet(uint16_t numLeds)
-{
-    return numLeds / NUM_SETS;
-}
-
 #pragma region COMMANDS
 
 void tryExecuteCommand()
@@ -461,8 +459,8 @@ void tryExecuteCommand()
             }
             if (command.equals("PAUS"))
                 setPause(getBoolValue());
-            if (command.equals("BLUR"))
-                setBlur();
+            if (command.equals("FADE"))
+                setFade();
             if (command.equals("POSN"))
                 setPosition();
             if (command.equals("PTN1"))

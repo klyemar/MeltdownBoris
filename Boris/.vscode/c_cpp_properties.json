@@ -8,9 +8,6 @@
                 "C:\\Program Files (x86)\\Arduino\\tools\\**",
                 "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
                 "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
-                "C:\\Program Files (x86)\\Arduino\\hardware\\teensy\\avr\\**",
-                "C:\\Program Files (x86)\\Arduino\\hardware\\teensy\\avr\\cores\\arduino",
-                "C:\\Program Files (x86)\\Arduino\\hardware\\teensy\\avr\\libraries",
                 "${workspaceRoot}",
                 "C:\\Program Files (x86)\\Arduino\\hardware\\tools",
                 "C:\\Program Files (x86)\\Arduino\\libraries",
@@ -20,12 +17,10 @@
             "browse": {
                 "path": [
                     "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
-                    "C:\\Program Files (x86)\\Arduino\\hardware\\teensy\\avr\\cores\\arduino",
                     "${workspaceRoot}",
                     "C:\\Program Files (x86)\\Arduino\\hardware\\tools",
                     "C:\\Program Files (x86)\\Arduino\\libraries",
                     "C:\\Users\\klyem\\Documents\\Arduino\\hardware\\tools",
-                    "C:\\Program Files (x86)\\Arduino\\hardware\\teensy\\avr\\libraries",
                     "C:\\Users\\klyem\\Documents\\Arduino\\libraries"
                 ],
                 "limitSymbolsToIncludedHeaders": false
