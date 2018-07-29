@@ -55,7 +55,7 @@ namespace ComputerToArduino
         private void ConnectToArduino()
         {
             string selectedPort = this.comboBoxPorts.GetItemText(this.comboBoxPorts.SelectedItem);
-            this.Port = new SerialPort(selectedPort, 1200, Parity.None, 8, StopBits.One);
+            this.Port = new SerialPort(selectedPort, 9600, Parity.None, 8, StopBits.One);
             this.Port.Open();
             this.Port.DataReceived += this.OnSerialData;
             this.buttonSerialConnect.Text = "Disconnect";
@@ -102,10 +102,19 @@ namespace ComputerToArduino
             if (sender is TrackBar) this.SendCommand(SerialCommands.Speed, (sender as TrackBar).Value);
         }
 
+        private void PatternButtonClicked(object sender, EventArgs e)
+        {
+            this.SendCommand(SerialCommands.Pattern1);
+        }
+
         private void DisconnectFromArduino()
         {
-            this.Port.Close();
-            this.Port.DataReceived -= this.OnSerialData;
+            if (this.Port != null)
+            {
+                this.Port.Close();
+                this.Port.DataReceived -= this.OnSerialData;
+            }
+
             this.buttonSerialConnect.Text = "Connect";
             DisableControls();
             ResetDefaults();
@@ -149,18 +158,43 @@ namespace ComputerToArduino
             this.trackBarFps.Value = 0;
         }
 
+        private void SendCommand(string command)
+        {
+            if (!this.IsConnected)
+            {
+                this.DisconnectFromArduino();
+
+            }
+            else
+            {
+                this.ArduinoService.SendCommand(this.Port, command, 0);
+            }
+        }
+
         private void SendCommand(string command, int value)
         {
-            if (!this.IsConnected) return;
+            if (!this.IsConnected)
+            {
+                this.DisconnectFromArduino();
 
-            this.ArduinoService.SendCommand(this.Port, command, value);
+            }
+            else
+            {
+                this.ArduinoService.SendCommand(this.Port, command, value);
+            }
         }
 
         private void SendCommand(string command, bool value)
         {
-            if (!this.IsConnected) return;
+            if (!this.IsConnected)
+            {
+                this.DisconnectFromArduino();
 
-            this.ArduinoService.SendCommand(this.Port, command, value);
+            }
+            else
+            {
+                this.ArduinoService.SendCommand(this.Port, command, value);
+            }
         }
 
         private void OnSerialData(object sender, SerialDataReceivedEventArgs e)

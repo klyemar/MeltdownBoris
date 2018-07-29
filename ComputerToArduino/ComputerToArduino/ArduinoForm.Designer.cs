@@ -41,6 +41,8 @@
             this.labelFps = new System.Windows.Forms.Label();
             this.checkBoxInvert = new System.Windows.Forms.CheckBox();
             this.checkBoxPause = new System.Windows.Forms.CheckBox();
+            this.button1 = new System.Windows.Forms.Button();
+            this.buttonPattern = new System.Windows.Forms.Button();
             this.groupBoxHue.SuspendLayout();
             this.groupBoxSerial.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarFps)).BeginInit();
@@ -198,11 +200,33 @@
             this.checkBoxPause.UseVisualStyleBackColor = true;
             this.checkBoxPause.CheckedChanged += new System.EventHandler(this.PauseCheckboxClicked);
             // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(0, 0);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 14;
+            this.button1.Text = "button1";
+            this.button1.UseVisualStyleBackColor = true;
+            // 
+            // buttonPattern
+            // 
+            this.buttonPattern.Location = new System.Drawing.Point(15, 404);
+            this.buttonPattern.Margin = new System.Windows.Forms.Padding(2);
+            this.buttonPattern.Name = "buttonPattern";
+            this.buttonPattern.Size = new System.Drawing.Size(102, 28);
+            this.buttonPattern.TabIndex = 2;
+            this.buttonPattern.Text = "Change Pattern";
+            this.buttonPattern.UseVisualStyleBackColor = true;
+            this.buttonPattern.Click += new System.EventHandler(this.PatternButtonClicked);
+            // 
             // ArduinoForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(380, 523);
+            this.Controls.Add(this.buttonPattern);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.checkBoxPause);
             this.Controls.Add(this.checkBoxInvert);
             this.Controls.Add(this.labelFps);
@@ -236,6 +260,8 @@
         private System.Windows.Forms.Label labelFps;
         private System.Windows.Forms.CheckBox checkBoxInvert;
         private System.Windows.Forms.CheckBox checkBoxPause;
+        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button buttonPattern;
     }
 }
 
