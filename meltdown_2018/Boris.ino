@@ -1,5 +1,7 @@
-#include "FastLED.h"
-#include "MeltdownLED.h"
+#define USE_OCTOWS2811
+#include <OctoWS2811.h>
+#include <FastLED.h>
+#include <MeltdownLED.h>
 
 FASTLED_USING_NAMESPACE
 
@@ -9,15 +11,22 @@ FASTLED_USING_NAMESPACE
 // This project builds off of the FastLED library and some of its existing patterns
 // and examples.
 
+#define DEBUG false
+
 #define DATA_PIN_1 2
 #define DATA_PIN_2 3
 #define DATA_PIN_3 4
 #define DATA_PIN_4 5
+// #define DATA_PIN_5 6
+// #define DATA_PIN_6 7
+// #define DATA_PIN_7 8
+// #define DATA_PIN_8 9
 
 #define PATTERN_PIN 13
 #define BRIGHTNESS_PIN -1
 #define FPS_PIN -1
 #define HUE_PIN -1
+#define FADE_PIN -1
 
 #define LED_TYPE WS2812B
 #define NUM_LEDS_WHEEL 69
@@ -30,19 +39,56 @@ CRGBArray<NUM_LEDS_STRIP> leds1;
 CRGBArray<NUM_LEDS_STRIP> leds2;
 CRGBArray<NUM_LEDS_STRIP> leds3;
 CRGBArray<NUM_LEDS_STRIP> leds4;
+// CRGBArray<NUM_LEDS_STRIP> leds5;
+// CRGBArray<NUM_LEDS_STRIP> leds6;
+// CRGBArray<NUM_LEDS_STRIP> leds7;
+// CRGBArray<NUM_LEDS_STRIP> leds8;
+
+CRGBArray<NUM_LEDS_STRIP> ledArrays[] = {
+    leds1,
+    leds2,
+    leds3,
+    leds4
+};
 
 CRGBSet wheelLeds1 = leds1(0, NUM_LEDS_WHEEL - 1);
 CRGBSet wheelLeds2 = leds2(0, NUM_LEDS_WHEEL - 1);
 CRGBSet wheelLeds3 = leds3(0, NUM_LEDS_WHEEL - 1);
 CRGBSet wheelLeds4 = leds4(0, NUM_LEDS_WHEEL - 1);
+// CRGBSet wheelLeds5 = leds5(0, NUM_LEDS_WHEEL - 1);
+// CRGBSet wheelLeds6 = leds6(0, NUM_LEDS_WHEEL - 1);
+// CRGBSet wheelLeds7 = leds7(0, NUM_LEDS_WHEEL - 1);
+// CRGBSet wheelLeds8 = leds8(0, NUM_LEDS_WHEEL - 1);
 
 CRGBSet spokeLeds1 = leds1(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
 CRGBSet spokeLeds2 = leds2(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
 CRGBSet spokeLeds3 = leds3(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
 CRGBSet spokeLeds4 = leds4(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+// CRGBSet spokeLeds5 = leds5(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+// CRGBSet spokeLeds6 = leds6(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+// CRGBSet spokeLeds7 = leds7(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
+// CRGBSet spokeLeds8 = leds8(NUM_LEDS_WHEEL, NUM_LEDS_STRIP - 1);
 
-CRGBSet ledWheelSets[] = { wheelLeds1, wheelLeds2, wheelLeds3, wheelLeds4 };
-CRGBSet ledSpokeSets[] = { spokeLeds1, spokeLeds2, spokeLeds3, spokeLeds4 };
+CRGBSet ledWheelSets[] = { 
+    wheelLeds1, 
+    wheelLeds2, 
+    wheelLeds3, 
+    wheelLeds4, 
+    // wheelLeds5, 
+    // wheelLeds6, 
+    // wheelLeds7, 
+    // wheelLeds8, 
+};
+CRGBSet ledSpokeSets[] = { 
+    spokeLeds1, 
+    spokeLeds2, 
+    spokeLeds3, 
+    spokeLeds4, 
+    // spokeLeds5, 
+    // spokeLeds6, 
+    // spokeLeds7, 
+    // spokeLeds8
+};
 
 // Serial input commands.
 String inputString = "";
@@ -53,6 +99,7 @@ uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gBrightness = 96;
 uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
 uint16_t gFps = 1000;
+float gFade = 20;
 bool gHue1 = false;
 bool gHue2 = false;
 bool gHue3 = false;
@@ -76,6 +123,10 @@ void setup()
     FastLED.addLeds<LED_TYPE, DATA_PIN_2>(leds2, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
     FastLED.addLeds<LED_TYPE, DATA_PIN_3>(leds3, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
     FastLED.addLeds<LED_TYPE, DATA_PIN_4>(leds4, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
+    // FastLED.addLeds<LED_TYPE, DATA_PIN_5>(leds5, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
+    // FastLED.addLeds<LED_TYPE, DATA_PIN_6>(leds6, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
+    // FastLED.addLeds<LED_TYPE, DATA_PIN_7>(leds7, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
+    // FastLED.addLeds<LED_TYPE, DATA_PIN_8>(leds8, NUM_LEDS_STRIP).setCorrection(TypicalLEDStrip);
 
     // set master brightness control
     FastLED.setBrightness(gBrightness);
@@ -153,7 +204,7 @@ void setInverse()
     #endif
 }
 
-void setFps(int overrideVal = -1)
+void setFps()
 {
     gFps = getAnalogValue(FPS_PIN, gFps, 500, 5000);
 
@@ -163,7 +214,7 @@ void setFps(int overrideVal = -1)
     #endif
 }
 
-void setHue(int overrideVal = -1)
+void setHue()
 {
     int val = 0;
     if (gHue1) val++;
@@ -180,12 +231,17 @@ void setHue(int overrideVal = -1)
     #endif
 }
 
-void setBlur(int overrideVal = -1)
+void setFade()
 {
-    
+    gFade = getAnalogValue(FADE_PIN, gFade, 3, 100);
+
+    #if DEBUG
+        Serial.print("Setting Fade: ");
+        Serial.println(gFade);
+    #endif
 }
 
-void setPosition(int overrideVal = -1)
+void setPosition()
 {
 
 }
@@ -228,7 +284,7 @@ void addGlitter(fract8 chanceOfGlitter, CRGBSet ledSets[], int numLeds)
 void confetti(CRGBSet ledSets[], int numLeds)
 {
     // random colored speckles that blink in and fade smoothly
-    fadeSetsToBlackBy(ledSets, numLeds, 10);
+    fadeSetsToBlackBy(ledSets, numLeds, 1);
 
     int pos = random16(numLeds * NUM_SETS);
     *getLed(ledSets, pos, numLeds) += CHSV(gHue + random8(64), 200, 255);
@@ -236,7 +292,7 @@ void confetti(CRGBSet ledSets[], int numLeds)
 
 void sinelon(CRGBSet ledSets[], int numLeds)
 {
-    fadeSetsToBlackBy(ledSets, numLeds, 20);
+    fadeSetsToBlackBy(ledSets, numLeds, 1);
 
     int pos = beatsin16(13, 0, (numLeds * NUM_SETS) - 1);
     *getLed(ledSets, pos, numLeds) += CHSV(gHue, 255, 192);
@@ -257,7 +313,7 @@ void bpm(CRGBSet ledSets[], int numLeds)
 void juggle(CRGBSet ledSets[], int numLeds)
 {
     // eight colored dots, weaving in and out of sync with each other
-    fadeSetsToBlackBy(ledSets, numLeds, 20);
+    fadeSetsToBlackBy(ledSets, numLeds, 1);
 
     byte dothue = 0;
     for (int i = 0; i < 8; i++)
@@ -270,20 +326,23 @@ void juggle(CRGBSet ledSets[], int numLeds)
 
 void invert()
 {
-    // if (gInverse)
-    // {
-    //     for (int i = 0; i < NUM_LEDS; i++)
-    //     {
-    //         leds[i] = -leds[i];
-    //     }
-    // }
+    if (gInverse)
+    {
+        for (int i = 0; i < NUM_SETS; i++)
+        {
+            for (int j = 0; j < NUM_LEDS_STRIP; j++)
+            {
+                ledArrays[i][j] = -ledArrays[i][j];
+            }
+        }
+    }
 }
 
 void fadeSetsToBlackBy(CRGBSet ledSets[], uint16_t numLeds, uint8_t fade)
 {
     for (int i = 0; i < NUM_SETS; i++)
     {
-        fadeToBlackBy(ledSets[i], numLeds, 20);
+        fadeToBlackBy(ledSets[i], numLeds, fade * gFade);
     }
 }
 
@@ -332,6 +391,8 @@ float getAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
         val = MeltdownLED.GetAnalogValue(inputString, currVal, minVal, maxVal);
     else
         val = MeltdownLED.GetAnalogValue(pin, currVal, minVal, maxVal);
+
+    return val;
 }
 
 #pragma endregion INPUTS
@@ -345,11 +406,6 @@ CRGB* getLed(CRGBSet ledSets[], int index, uint16_t numLeds)
             return &ledSets[i][index - (i * numLeds)];
         }
     }
-}
-
-int getLedsPerSet(uint16_t numLeds)
-{
-    return numLeds / NUM_SETS;
 }
 
 #pragma region COMMANDS
@@ -394,8 +450,8 @@ void tryExecuteCommand()
             }
             if (command.equals("PAUS"))
                 setPause(getBoolValue());
-            if (command.equals("BLUR"))
-                setBlur();
+            if (command.equals("FADE"))
+                setFade();
             if (command.equals("POSN"))
                 setPosition();
             if (command.equals("PTN1"))
