@@ -22,7 +22,7 @@ namespace ComputerToArduino.App
 
         public const string Pause = "PAUS";
 
-        public const string Blur = "BLUR";
+        public const string Fade = "FADE";
 
         public const string Position = "POSN";
 

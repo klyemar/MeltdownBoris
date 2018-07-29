@@ -102,18 +102,23 @@ namespace ComputerToArduino
             if (sender is TrackBar) this.SendCommand(SerialCommands.Speed, (sender as TrackBar).Value);
         }
 
-        private void PatternButtonClicked(object sender, EventArgs e)
+        private void TrackBarFadeValueChanged(object sender, EventArgs e)
+        {
+            if (sender is TrackBar) this.SendCommand(SerialCommands.Fade, (sender as TrackBar).Value);
+        }
+
+        private void ButtonPatternClicked(object sender, EventArgs e)
         {
             this.SendCommand(SerialCommands.Pattern1);
         }
 
         private void DisconnectFromArduino()
         {
-            if (this.Port != null)
+            if (this.IsConnected)
             {
                 this.Port.Close();
-                this.Port.DataReceived -= this.OnSerialData;
             }
+            this.Port.DataReceived -= this.OnSerialData;
 
             this.buttonSerialConnect.Text = "Connect";
             DisableControls();
@@ -131,6 +136,8 @@ namespace ComputerToArduino
             this.checkBoxInvert.Enabled = true;
             this.groupBoxHue.Enabled = true;
             this.trackBarFps.Enabled = true;
+            this.trackBarFade.Enabled = true;
+            this.buttonPattern.Enabled = true;
         }
 
         private void DisableControls()
@@ -144,6 +151,8 @@ namespace ComputerToArduino
             this.checkBoxInvert.Enabled = false;
             this.groupBoxHue.Enabled = false;
             this.trackBarFps.Enabled = false;
+            this.trackBarFade.Enabled = false;
+            this.buttonPattern.Enabled = false;
         }
 
         private void ResetDefaults()
@@ -155,46 +164,29 @@ namespace ComputerToArduino
             this.checkBoxHue5.Checked = false;
             this.checkBoxPause.Checked = false;
             this.checkBoxInvert.Checked = false;
+            this.trackBarFade.Value = 0;
             this.trackBarFps.Value = 0;
         }
 
         private void SendCommand(string command)
         {
-            if (!this.IsConnected)
-            {
-                this.DisconnectFromArduino();
+            if (!this.IsConnected) return;
 
-            }
-            else
-            {
-                this.ArduinoService.SendCommand(this.Port, command, 0);
-            }
+            this.ArduinoService.SendCommand(this.Port, command, 0);
         }
 
         private void SendCommand(string command, int value)
         {
-            if (!this.IsConnected)
-            {
-                this.DisconnectFromArduino();
+            if (!this.IsConnected) return;
 
-            }
-            else
-            {
-                this.ArduinoService.SendCommand(this.Port, command, value);
-            }
+            this.ArduinoService.SendCommand(this.Port, command, value);
         }
 
         private void SendCommand(string command, bool value)
         {
-            if (!this.IsConnected)
-            {
-                this.DisconnectFromArduino();
+            if (!this.IsConnected) return;
 
-            }
-            else
-            {
-                this.ArduinoService.SendCommand(this.Port, command, value);
-            }
+            this.ArduinoService.SendCommand(this.Port, command, value);
         }
 
         private void OnSerialData(object sender, SerialDataReceivedEventArgs e)

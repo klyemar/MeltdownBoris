@@ -41,11 +41,17 @@
             this.labelFps = new System.Windows.Forms.Label();
             this.checkBoxInvert = new System.Windows.Forms.CheckBox();
             this.checkBoxPause = new System.Windows.Forms.CheckBox();
-            this.button1 = new System.Windows.Forms.Button();
+            this.groupBoxAnalog = new System.Windows.Forms.GroupBox();
+            this.labelFade = new System.Windows.Forms.Label();
+            this.trackBarFade = new System.Windows.Forms.TrackBar();
+            this.groupBoxDigital = new System.Windows.Forms.GroupBox();
             this.buttonPattern = new System.Windows.Forms.Button();
             this.groupBoxHue.SuspendLayout();
             this.groupBoxSerial.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBarFps)).BeginInit();
+            this.groupBoxAnalog.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarFade)).BeginInit();
+            this.groupBoxDigital.SuspendLayout();
             this.SuspendLayout();
             // 
             // buttonSerialConnect
@@ -148,11 +154,11 @@
             // 
             this.groupBoxSerial.Controls.Add(this.comboBoxPorts);
             this.groupBoxSerial.Controls.Add(this.buttonSerialConnect);
-            this.groupBoxSerial.Location = new System.Drawing.Point(9, 446);
+            this.groupBoxSerial.Location = new System.Drawing.Point(17, 446);
             this.groupBoxSerial.Margin = new System.Windows.Forms.Padding(2);
             this.groupBoxSerial.Name = "groupBoxSerial";
             this.groupBoxSerial.Padding = new System.Windows.Forms.Padding(2);
-            this.groupBoxSerial.Size = new System.Drawing.Size(352, 66);
+            this.groupBoxSerial.Size = new System.Drawing.Size(344, 66);
             this.groupBoxSerial.TabIndex = 9;
             this.groupBoxSerial.TabStop = false;
             this.groupBoxSerial.Text = "Serial Connection";
@@ -160,10 +166,10 @@
             // trackBarFps
             // 
             this.trackBarFps.LargeChange = 256;
-            this.trackBarFps.Location = new System.Drawing.Point(11, 127);
+            this.trackBarFps.Location = new System.Drawing.Point(6, 125);
             this.trackBarFps.Maximum = 1023;
             this.trackBarFps.Name = "trackBarFps";
-            this.trackBarFps.Size = new System.Drawing.Size(352, 45);
+            this.trackBarFps.Size = new System.Drawing.Size(332, 45);
             this.trackBarFps.SmallChange = 32;
             this.trackBarFps.TabIndex = 10;
             this.trackBarFps.TickFrequency = 32;
@@ -172,7 +178,7 @@
             // labelFps
             // 
             this.labelFps.AutoSize = true;
-            this.labelFps.Location = new System.Drawing.Point(23, 111);
+            this.labelFps.Location = new System.Drawing.Point(6, 109);
             this.labelFps.Name = "labelFps";
             this.labelFps.Size = new System.Drawing.Size(27, 13);
             this.labelFps.TabIndex = 11;
@@ -181,7 +187,7 @@
             // checkBoxInvert
             // 
             this.checkBoxInvert.AutoSize = true;
-            this.checkBoxInvert.Location = new System.Drawing.Point(26, 170);
+            this.checkBoxInvert.Location = new System.Drawing.Point(6, 19);
             this.checkBoxInvert.Name = "checkBoxInvert";
             this.checkBoxInvert.Size = new System.Drawing.Size(53, 17);
             this.checkBoxInvert.TabIndex = 12;
@@ -192,7 +198,7 @@
             // checkBoxPause
             // 
             this.checkBoxPause.AutoSize = true;
-            this.checkBoxPause.Location = new System.Drawing.Point(26, 193);
+            this.checkBoxPause.Location = new System.Drawing.Point(6, 42);
             this.checkBoxPause.Name = "checkBoxPause";
             this.checkBoxPause.Size = new System.Drawing.Size(56, 17);
             this.checkBoxPause.TabIndex = 13;
@@ -200,25 +206,60 @@
             this.checkBoxPause.UseVisualStyleBackColor = true;
             this.checkBoxPause.CheckedChanged += new System.EventHandler(this.PauseCheckboxClicked);
             // 
-            // button1
+            // groupBoxAnalog
             // 
-            this.button1.Location = new System.Drawing.Point(0, 0);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(75, 23);
-            this.button1.TabIndex = 14;
-            this.button1.Text = "button1";
-            this.button1.UseVisualStyleBackColor = true;
+            this.groupBoxAnalog.Controls.Add(this.trackBarFps);
+            this.groupBoxAnalog.Controls.Add(this.labelFade);
+            this.groupBoxAnalog.Controls.Add(this.labelFps);
+            this.groupBoxAnalog.Controls.Add(this.trackBarFade);
+            this.groupBoxAnalog.Location = new System.Drawing.Point(17, 265);
+            this.groupBoxAnalog.Name = "groupBoxAnalog";
+            this.groupBoxAnalog.Size = new System.Drawing.Size(344, 176);
+            this.groupBoxAnalog.TabIndex = 16;
+            this.groupBoxAnalog.TabStop = false;
+            this.groupBoxAnalog.Text = "Analog";
+            // 
+            // labelFade
+            // 
+            this.labelFade.AutoSize = true;
+            this.labelFade.Location = new System.Drawing.Point(6, 45);
+            this.labelFade.Name = "labelFade";
+            this.labelFade.Size = new System.Drawing.Size(31, 13);
+            this.labelFade.TabIndex = 15;
+            this.labelFade.Text = "Fade";
+            // 
+            // trackBarFade
+            // 
+            this.trackBarFade.LargeChange = 256;
+            this.trackBarFade.Location = new System.Drawing.Point(9, 61);
+            this.trackBarFade.Maximum = 1023;
+            this.trackBarFade.Name = "trackBarFade";
+            this.trackBarFade.Size = new System.Drawing.Size(329, 45);
+            this.trackBarFade.SmallChange = 32;
+            this.trackBarFade.TabIndex = 14;
+            this.trackBarFade.TickFrequency = 32;
+            this.trackBarFade.ValueChanged += new System.EventHandler(this.TrackBarFadeValueChanged);
+            // 
+            // groupBoxDigital
+            // 
+            this.groupBoxDigital.Controls.Add(this.checkBoxInvert);
+            this.groupBoxDigital.Controls.Add(this.checkBoxPause);
+            this.groupBoxDigital.Location = new System.Drawing.Point(17, 113);
+            this.groupBoxDigital.Name = "groupBoxDigital";
+            this.groupBoxDigital.Size = new System.Drawing.Size(344, 67);
+            this.groupBoxDigital.TabIndex = 17;
+            this.groupBoxDigital.TabStop = false;
+            this.groupBoxDigital.Text = "Digital";
             // 
             // buttonPattern
             // 
-            this.buttonPattern.Location = new System.Drawing.Point(15, 404);
-            this.buttonPattern.Margin = new System.Windows.Forms.Padding(2);
+            this.buttonPattern.Location = new System.Drawing.Point(23, 231);
             this.buttonPattern.Name = "buttonPattern";
             this.buttonPattern.Size = new System.Drawing.Size(102, 28);
-            this.buttonPattern.TabIndex = 2;
+            this.buttonPattern.TabIndex = 18;
             this.buttonPattern.Text = "Change Pattern";
             this.buttonPattern.UseVisualStyleBackColor = true;
-            this.buttonPattern.Click += new System.EventHandler(this.PatternButtonClicked);
+            this.buttonPattern.Click += new System.EventHandler(this.ButtonPatternClicked);
             // 
             // ArduinoForm
             // 
@@ -226,11 +267,8 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(380, 523);
             this.Controls.Add(this.buttonPattern);
-            this.Controls.Add(this.button1);
-            this.Controls.Add(this.checkBoxPause);
-            this.Controls.Add(this.checkBoxInvert);
-            this.Controls.Add(this.labelFps);
-            this.Controls.Add(this.trackBarFps);
+            this.Controls.Add(this.groupBoxDigital);
+            this.Controls.Add(this.groupBoxAnalog);
             this.Controls.Add(this.groupBoxSerial);
             this.Controls.Add(this.groupBoxHue);
             this.Margin = new System.Windows.Forms.Padding(2);
@@ -240,8 +278,12 @@
             this.groupBoxHue.PerformLayout();
             this.groupBoxSerial.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.trackBarFps)).EndInit();
+            this.groupBoxAnalog.ResumeLayout(false);
+            this.groupBoxAnalog.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarFade)).EndInit();
+            this.groupBoxDigital.ResumeLayout(false);
+            this.groupBoxDigital.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -260,7 +302,10 @@
         private System.Windows.Forms.Label labelFps;
         private System.Windows.Forms.CheckBox checkBoxInvert;
         private System.Windows.Forms.CheckBox checkBoxPause;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.GroupBox groupBoxAnalog;
+        private System.Windows.Forms.GroupBox groupBoxDigital;
+        private System.Windows.Forms.Label labelFade;
+        private System.Windows.Forms.TrackBar trackBarFade;
         private System.Windows.Forms.Button buttonPattern;
     }
 }

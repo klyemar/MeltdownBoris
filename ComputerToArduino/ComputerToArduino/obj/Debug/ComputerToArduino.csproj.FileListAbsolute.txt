@@ -11,16 +11,3 @@ C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\Computer
 C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.pdb
 C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.csprojResolveAssemblyReference.cache
 C:\Users\klyem\Downloads\ArduinoCompurerCommunication\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.ArduinoForm.resources
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.exe.manifest
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.application
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.exe
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\bin\Debug\ComputerToArduino.pdb
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.csprojAssemblyReference.cache
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.ArduinoForm.resources
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.Properties.Resources.resources
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.csproj.GenerateResource.cache
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.csproj.CoreCompileInputs.cache
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.exe.manifest
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.application
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.exe
-C:\Users\klyem\Documents\Arduino\ComputerToArduino\ComputerToArduino\obj\Debug\ComputerToArduino.pdb
