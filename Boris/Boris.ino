@@ -11,14 +11,16 @@
 
 #define DEBUG true
 
-#define PATTERN_PIN 13
-#define BRIGHTNESS_PIN -1
-#define FPS_PIN -1
-#define HUE_PIN -1
-#define FADE_PIN -1
+#define PATTERN_PIN 0
+#define BRIGHTNESS_PIN 1
+#define FPS_PIN 23
+#define HUE_PIN 22
+#define FADE_PIN 19
+#define COOL_PIN 18
+#define TERA_PIN 17
 
 #define LED_TYPE OCTOWS2811
-#define NUM_SETS 8
+#define NUM_SETS 1
 #define NUM_STRIPS_PER_SET 1
 #define NUM_LEDS_PER_WHEEL 69
 #define NUM_LEDS_PER_SPOKE 60
@@ -65,7 +67,7 @@ void setup()
 
     setupLedArrays();
 
-    // pinMode(PATTERN_PIN, INPUT);
+    pinMode(PATTERN_PIN, INPUT);
 }
 
 void setupLedArrays()
@@ -109,7 +111,7 @@ SimplePatternList gPatterns = {rainbow, rainbowWithGlitter, confetti, sinelon, b
 
 void loop()
 {
-    // checkButtonStates();
+    checkButtonStates();
 
     tryExecuteCommand();
 
@@ -131,6 +133,34 @@ void loop()
 
     // insert a delay to keep the framerate modest
     LEDS.delay(1000 / gFps);
+ 
+    //gutCheck();
+}
+
+void gutCheck()
+{   
+    static uint8_t hue = 0;
+    for(int i = 0; i < NUM_SETS; i++) 
+    {
+        for(int j = 0; j < (NUM_LEDS_PER_SET) ; j++) 
+        {
+            leds[(i*(NUM_LEDS_PER_SET)) + j] = CHSV((32*i) + hue+j,192,255);
+        }
+    }
+
+    // Set the first n leds on each strip to show which strip it is
+    for(int i = 0; i < NUM_SETS; i++) 
+    {
+        for(int j = 0; j <= i; j++) 
+        {
+            leds[(i*(NUM_LEDS_PER_SET)) + j] = CRGB::Red;
+        }
+    }
+
+    hue++;
+
+    LEDS.show();
+    LEDS.delay(10);
 }
 
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
