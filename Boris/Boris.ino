@@ -11,27 +11,46 @@
 
 #define DEBUG true
 
-#define PATTERN_PIN 0
-#define BRIGHTNESS_PIN 1
-#define FPS_PIN 23
-#define HUE_PIN 22
-#define FADE_PIN 19
-#define COOL_PIN 18
-#define TERA_PIN 17
-
 #define LED_TYPE OCTOWS2811
-#define NUM_SETS 1
-#define NUM_STRIPS_PER_SET 1
+
+#define BUTTON_PIN_1 0
+#define BUTTON_PIN_2 1
+#define BUTTON_PIN_3 23
+#define BUTTON_PIN_4 22
+#define BUTTON_PIN_5 19
+#define ANALOG_PIN_1 18
+#define ANALOG_PIN_2 17
+
+#define PATTERN_PIN BUTTON_PIN_1
+#define FADE_PIN ANALOG_PIN_1
+#define FPS_PIN -1 // ANALOG_PIN_2
+#define BRIGHTNESS_PIN ANALOG_PIN_2
+
+#define NUM_PENTS 1
+#define NUM_STRIPS_PER_PENT 1
+#define NUM_BASES 0
+#define NUM_STRIPS_PER_BASE 0
+#define NUM_MED_RINGS 0
+#define NUM_LARGE_RINGS 0
+
 #define NUM_LEDS_PER_WHEEL 69
 #define NUM_LEDS_PER_SPOKE 60
+#define NUM_LEDS_PER_MED_RING 16
+#define NUM_LEDS_PER_LARGE_RING 24
 #define NUM_LEDS_PER_STRIP (NUM_LEDS_PER_WHEEL + NUM_LEDS_PER_SPOKE)
-#define NUM_LEDS_PER_SET (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_SET)
-#define NUM_LEDS (NUM_SETS * NUM_LEDS_PER_SET)
+#define NUM_LEDS_PER_PENT (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_PENT)
+#define NUM_PENT_LEDS (NUM_PENTS * NUM_LEDS_PER_PENT)
+#define NUM_LEDS_PER_BASE (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_BASE)
+#define NUM_BASE_LEDS (NUM_LEDS_PER_BASE * NUM_BASES)
+#define NUM_MED_RING_LEDS (NUM_LEDS_PER_MED_RING + NUM_MED_RINGS)
+#define NUM_LARGE_RING_LEDS (NUM_LEDS_PER_LARGE_RING + NUM_LARGE_RINGS)
+#define NUM_RING_LEDS (NUM_LARGE_RING_LEDS + NUM_MED_RING_LEDS)
+#define NUM_LEDS (NUM_BASE_LEDS + NUM_PENT_LEDS + NUM_RING_LEDS)
 
 CRGB leds[NUM_LEDS];
 
-CRGB *ledWheelSets[NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_SET][NUM_SETS];
-CRGB *ledSpokeSets[NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_SET][NUM_SETS];
+CRGB *ledWheelSets[NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT][NUM_PENTS];
+CRGB *ledSpokeSets[NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT][NUM_PENTS];
 
 // Serial input commands.
 String inputString = "";
@@ -51,6 +70,28 @@ bool gHue5 = false;
 bool gInverse = false;
 bool gPause = false;
 
+// Buttons.
+struct Button
+{
+    uint8_t pin;
+    uint8_t state;
+    bool canChangeState;
+    void (*callback)();
+    
+    Button(uint8_t pin) : pin (pin), state {0}, canChangeState {true}
+    {}
+};
+
+Button patternButton = { PATTERN_PIN };
+Button button1 = { BUTTON_PIN_1 };
+Button button2 = { BUTTON_PIN_2 };
+Button button3 = { BUTTON_PIN_3 };
+Button button4 = { BUTTON_PIN_4 }; 
+
+// Ring options.
+enum RingPosition { Top, Bottom, Full, Empty };
+enum RingSize { Large, Medium };
+
 void setup()
 {
     // initialize serial communication at 9600 bits per second:
@@ -60,21 +101,24 @@ void setup()
     Serial.println("Serial port opened.");
     
     delay(3000); // 3 second delay for recovery
-    LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_SET);
+    LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_PENT);
 
     // set master brightness control
     LEDS.setBrightness(gBrightness);
 
     setupLedArrays();
 
+    setupButtons();
+
     pinMode(PATTERN_PIN, INPUT);
+    pinMode(ANALOG_PIN_2, INPUT);
 }
 
 void setupLedArrays()
 {
-    for (int i = 0; i < NUM_SETS; i++)
+    for (int i = 0; i < NUM_PENTS; i++)
     {
-        for (int j = 0; j < NUM_STRIPS_PER_SET; j++)
+        for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
         {
             for (int k = 0; k < NUM_LEDS_PER_WHEEL; k++)
             {
@@ -84,9 +128,9 @@ void setupLedArrays()
                     Serial.print("][");
                     Serial.print(i);
                     Serial.print("]: ");
-                    Serial.println((i * NUM_LEDS_PER_SET) + (j * NUM_LEDS_PER_STRIP) + k);
+                    Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
                 #endif
-                ledWheelSets[(j * NUM_LEDS_PER_WHEEL) + k][i] = &leds[(i * NUM_LEDS_PER_SET) + (j * NUM_LEDS_PER_STRIP) + k];
+                ledWheelSets[(j * NUM_LEDS_PER_WHEEL) + k][i] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
             }
 
             for (int k = 0; k < NUM_LEDS_PER_SPOKE; k++)
@@ -97,21 +141,28 @@ void setupLedArrays()
                     Serial.print("][");
                     Serial.print(i);
                     Serial.print("]: ");
-                    Serial.println((i * NUM_LEDS_PER_SET) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
+                    Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
                 #endif
-                ledSpokeSets[(j * NUM_LEDS_PER_SPOKE) + k][i] = &leds[(i * NUM_LEDS_PER_SET) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
+                ledSpokeSets[(j * NUM_LEDS_PER_SPOKE) + k][i] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
             }
         }
     }
 }
 
+void setupButtons()
+{  
+    patternButton.callback = nextPattern;
+}
+
 // List of patterns to cycle through.  Each is defined as a separate function below.
-typedef void (*SimplePatternList[])(CRGB*[][NUM_SETS], int);
+typedef void (*SimplePatternList[])(CRGB*[][NUM_PENTS], int);
 SimplePatternList gPatterns = {rainbow, rainbowWithGlitter, confetti, sinelon, bpm, juggle};
 
 void loop()
 {
     checkButtonStates();
+
+    checkModifiers();
 
     tryExecuteCommand();
 
@@ -140,20 +191,20 @@ void loop()
 void gutCheck()
 {   
     static uint8_t hue = 0;
-    for(int i = 0; i < NUM_SETS; i++) 
+    for(int i = 0; i < NUM_PENTS; i++) 
     {
-        for(int j = 0; j < (NUM_LEDS_PER_SET) ; j++) 
+        for(int j = 0; j < (NUM_LEDS_PER_PENT) ; j++) 
         {
-            leds[(i*(NUM_LEDS_PER_SET)) + j] = CHSV((32*i) + hue+j,192,255);
+            leds[(i*(NUM_LEDS_PER_PENT)) + j] = CHSV((32*i) + hue+j,192,255);
         }
     }
 
     // Set the first n leds on each strip to show which strip it is
-    for(int i = 0; i < NUM_SETS; i++) 
+    for(int i = 0; i < NUM_PENTS; i++) 
     {
         for(int j = 0; j <= i; j++) 
         {
-            leds[(i*(NUM_LEDS_PER_SET)) + j] = CRGB::Red;
+            leds[(i*(NUM_LEDS_PER_PENT)) + j] = CRGB::Red;
         }
     }
 
@@ -183,6 +234,11 @@ void nextPattern()
 }
 
 #pragma region SET MODIFIERS
+
+void checkModifiers()
+{
+    setBrightness();
+}
 
 void setBrightness()
 {
@@ -263,85 +319,99 @@ void setPause(bool isPaused)
 
 void setColor(CRGB::HTMLColorCode color)
 {
-    for (int i = 0; i < NUM_LEDS; i++)
+    for (int i = 0; i < NUM_PENT_LEDS; i++)
     {
         leds[i] = color;
     }
 }
 
-void rainbow(CRGB *ledSets[][NUM_SETS], int numLeds)
+void setRingColor(CRGB *ringLeds[], RingPosition position, RingSize size, CRGB::HTMLColorCode color)
+{
+    uint8_t numLeds = getNumRingLeds(position, size);
+
+    CRGB** leds = getRingLeds(ringLeds, position, size);
+
+    if (position == Empty) color = CRGB::Black;
+
+    for (int i = 0; i < numLeds; i++)
+    {
+        *leds[i] = color;
+    }
+}
+
+void rainbow(CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     // FastLED's built-in rainbow generator
     fillRainbow(ledSets, numLeds, gHue, 7);
 }
 
-void rainbowWithGlitter(CRGB *ledSets[][NUM_SETS], int numLeds)
+void rainbowWithGlitter(CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     // built-in FastLED rainbow, plus some random sparkly glitter
     rainbow(ledSets, numLeds);
     addGlitter(80, ledSets, numLeds);
 }
 
-void addGlitter(fract8 chanceOfGlitter, CRGB *ledSets[][NUM_SETS], int numLeds)
+void addGlitter(fract8 chanceOfGlitter, CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     if (random8() < chanceOfGlitter)
     {
-        for (int i = 0; i < NUM_SETS; i++)
+        for (int i = 0; i < NUM_PENTS; i++)
         {
-            *getLed(ledSets, i, random16(numLeds * NUM_STRIPS_PER_SET)) += CRGB::White;
+            *getLed(ledSets, i, random16(numLeds * NUM_STRIPS_PER_PENT)) += CRGB::White;
         }
     }
 }
 
-void confetti(CRGB *ledSets[][NUM_SETS], int numLeds)
+void confetti(CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     // random colored speckles that blink in and fade smoothly
     fadeSetsToBlackBy(ledSets, numLeds, 1);
 
-    int pos = random16(numLeds * NUM_STRIPS_PER_SET);
-    for (int i = 0; i < NUM_SETS; i++)
+    int pos = random16(numLeds * NUM_STRIPS_PER_PENT);
+    for (int i = 0; i < NUM_PENTS; i++)
     {
         *getLed(ledSets, i, pos) += CHSV(gHue + random8(64), 200, 255);
     }
 }
 
-void sinelon(CRGB *ledSets[][NUM_SETS], int numLeds)
+void sinelon(CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     fadeSetsToBlackBy(ledSets, numLeds, 2);
 
-    int pos = beatsin16(13, 0, (numLeds * NUM_STRIPS_PER_SET) - 1);
-    for (int i = 0; i < NUM_SETS; i++)
+    int pos = beatsin16(13, 0, (numLeds * NUM_STRIPS_PER_PENT) - 1);
+    for (int i = 0; i < NUM_PENTS; i++)
     {
         *getLed(ledSets, i, pos) += CHSV(gHue, 255, 192);
     }
 }
 
-void bpm(CRGB *ledSets[][NUM_SETS], int numLeds)
+void bpm(CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
     uint8_t BeatsPerMinute = 62;
     CRGBPalette16 palette = PartyColors_p;
     uint8_t beat = beatsin8(BeatsPerMinute, 64, 255);
-    for (int i = 0; i < NUM_SETS; i++)
+    for (int i = 0; i < NUM_PENTS; i++)
     { //9948
-        for (int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++)
+        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
         {
             *getLed(ledSets, i, j) = ColorFromPalette(palette, gHue + (j * 2), beat - gHue + (j* 10));
         }
     }
 }
 
-void juggle(CRGB *ledSets[][NUM_SETS], int numLeds)
+void juggle(CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     // eight colored dots, weaving in and out of sync with each other
     fadeSetsToBlackBy(ledSets, numLeds, 2);
 
-    for (int i = 0; i < NUM_SETS; i++)
+    for (int i = 0; i < NUM_PENTS; i++)
     {
         byte dothue = 0;
         for (int j = 0; j < 8; j++)
         {
-            int pos = beatsin16(j + 7, 0, (numLeds * NUM_STRIPS_PER_SET) - 1);
+            int pos = beatsin16(j + 7, 0, (numLeds * NUM_STRIPS_PER_PENT) - 1);
             *getLed(ledSets, i, pos) |= CHSV(dothue, 200, 255);
         }
         dothue += 32;
@@ -352,24 +422,24 @@ void invert()
 {
     if (gInverse)
     {
-        for (int i = 0; i < NUM_LEDS; i++)
+        for (int i = 0; i < NUM_PENT_LEDS; i++)
         {
             leds[i] = -leds[i];
         }
     }
 }
 
-void fadeSetsToBlackBy(CRGB *ledSets[][NUM_SETS], uint16_t numLeds, uint8_t fade)
+void fadeSetsToBlackBy(CRGB *ledSets[][NUM_PENTS], uint16_t numLeds, uint8_t fade)
 {
-    for (int i = 0; i < NUM_SETS; i++)
+    for (int i = 0; i < NUM_PENTS; i++)
     {
-        CRGB* ledSet[numLeds * NUM_STRIPS_PER_SET];
-        for (int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++)
+        CRGB* ledSet[numLeds * NUM_STRIPS_PER_PENT];
+        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
         {
             ledSet[j] = ledSets[j][i];
         }
 
-        for( int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++) 
+        for( int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++) 
         {
             uint8_t scale = 255 - (fade * gFade);
             (*ledSet[j]).nscale8(scale);
@@ -377,12 +447,12 @@ void fadeSetsToBlackBy(CRGB *ledSets[][NUM_SETS], uint16_t numLeds, uint8_t fade
     }
 }
 
-void fillRainbow(CRGB *ledSets[][NUM_SETS], uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
+void fillRainbow(CRGB *ledSets[][NUM_PENTS], uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
 {
-    for (int i = 0; i < NUM_SETS; i++)
+    for (int i = 0; i < NUM_PENTS; i++)
     {
-        CRGB* ledSet[numLeds * NUM_STRIPS_PER_SET];
-        for (int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++)
+        CRGB* ledSet[numLeds * NUM_STRIPS_PER_PENT];
+        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
         {
             ledSet[j] = ledSets[j][i];
         }
@@ -391,7 +461,7 @@ void fillRainbow(CRGB *ledSets[][NUM_SETS], uint16_t numLeds, uint8_t initialHue
         hsv.hue = initialHue;
         hsv.val = 255;
         hsv.sat = 240;
-        for( int j = 0; j < numLeds * NUM_STRIPS_PER_SET; j++) 
+        for( int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++) 
         {
             *ledSet[j] = hsv;
             hsv.hue += deltaHue;
@@ -399,37 +469,75 @@ void fillRainbow(CRGB *ledSets[][NUM_SETS], uint16_t numLeds, uint8_t initialHue
     }
 }
 
-CRGB* getLed(CRGB *ledSets[][NUM_SETS], int setIndex, int pos)
+CRGB* getLed(CRGB *ledSets[][NUM_PENTS], int setIndex, int pos)
 {
     return ledSets[pos][setIndex];
+}
+
+CRGB** getRingLeds(CRGB *ringLeds[], RingPosition position, RingSize size)
+{
+    // If the position is full or empty, we'll want all of our lights.
+    if (position == Full || position == Empty) return ringLeds;
+
+    uint8_t numLeds = getNumRingLeds(position, size);
+
+    CRGB *halfLeds[numLeds];
+
+    for (int i = 0; i < numLeds; i++)
+    {
+        if (position == Top)
+        {
+            halfLeds[i] = ringLeds[i];
+        }
+        else
+        {
+            halfLeds[i] = ringLeds[i + numLeds];
+        }
+    }
+
+    return halfLeds;
+}
+
+uint8_t getNumRingLeds(RingPosition position, RingSize size)
+{
+    uint8_t numLeds = NUM_LEDS_PER_LARGE_RING;
+    if (size == Medium)
+    {
+        numLeds = NUM_LEDS_PER_MED_RING;
+    }
+
+    if (position == Top || position == Bottom)
+    {
+        return numLeds / 2;
+    }
+    else
+    {
+        return numLeds;
+    }
 }
 
 #pragma endregion PATTERNS
 
 #pragma region INPUTS
 
-// Button input.
-int patternState = 0;         
-bool canChangePatternState = true;
-
 void checkButtonStates()
 {
-    checkButtonState(PATTERN_PIN, &patternState, &canChangePatternState, nextPattern);
+    checkButtonState(&patternButton);
 }
 
-void checkButtonState(uint8_t pin, int *buttonState, bool *canChangeState, void (*func)())
+void checkButtonState(Button *button)
 {
     // Read the state of the button pin.
-    *buttonState = digitalRead(pin);
+    button->state = digitalRead(button->pin);
     // Check if the button is pressed. If it is, the buttonState is HIGH.
-    if (*buttonState == LOW && *canChangeState) 
+    if (button->state == LOW && button->canChangeState) 
     {
-        func();
-        *canChangeState = false;
+        button->callback();
+        button->canChangeState = false;
     }
-    else if (*buttonState == HIGH && !*canChangeState)
+    else if (button->state == HIGH && !button->canChangeState)
     {
-        *canChangeState = true;
+        button->canChangeState = true;
     }
 }
 
