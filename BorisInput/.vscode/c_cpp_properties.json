@@ -5,21 +5,21 @@
             "includePath": [
                 "C:\\Users\\klyem\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\**",
                 "C:\\Users\\klyem\\AppData\\Local\\Arduino15\\packages\\esp8266\\hardware\\esp8266\\2.4.1\\**",
-                "C:\\Program Files (x86)\\ArduinoTeensy\\tools\\**",
-                "C:\\Program Files (x86)\\ArduinoTeensy\\hardware\\arduino\\avr\\**",
-                "C:\\Program Files (x86)\\ArduinoTeensy\\hardware\\arduino\\avr\\cores\\arduino",
+                "C:\\Program Files (x86)\\Arduino\\tools\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
                 "${workspaceRoot}",
-                "C:\\Program Files (x86)\\ArduinoTeensy\\hardware\\tools",
-                "C:\\Program Files (x86)\\ArduinoTeensy\\libraries",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\tools",
+                "C:\\Program Files (x86)\\Arduino\\libraries",
                 "C:\\Users\\klyem\\Documents\\Arduino\\hardware\\tools",
                 "C:\\Users\\klyem\\Documents\\Arduino\\libraries"
             ],
             "browse": {
                 "path": [
-                    "C:\\Program Files (x86)\\ArduinoTeensy\\hardware\\arduino\\avr\\cores\\arduino",
+                    "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
                     "${workspaceRoot}",
-                    "C:\\Program Files (x86)\\ArduinoTeensy\\hardware\\tools",
-                    "C:\\Program Files (x86)\\ArduinoTeensy\\libraries",
+                    "C:\\Program Files (x86)\\Arduino\\hardware\\tools",
+                    "C:\\Program Files (x86)\\Arduino\\libraries",
                     "C:\\Users\\klyem\\Documents\\Arduino\\hardware\\tools",
                     "C:\\Users\\klyem\\Documents\\Arduino\\libraries"
                 ],

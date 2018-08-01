@@ -13,39 +13,19 @@
 
 #define LED_TYPE OCTOWS2811
 
-#define BUTTON_PIN_1 0
-#define BUTTON_PIN_2 1
-#define BUTTON_PIN_3 23
-#define BUTTON_PIN_4 22
-#define BUTTON_PIN_5 19
-#define ANALOG_PIN_1 18
-#define ANALOG_PIN_2 17
-
-#define PATTERN_PIN BUTTON_PIN_1
-#define FADE_PIN ANALOG_PIN_1
-#define FPS_PIN -1 // ANALOG_PIN_2
-#define BRIGHTNESS_PIN ANALOG_PIN_2
-
 #define NUM_PENTS 1
-#define NUM_STRIPS_PER_PENT 1
+#define NUM_STRIPS_PER_PENT 5
 #define NUM_BASES 0
 #define NUM_STRIPS_PER_BASE 0
-#define NUM_MED_RINGS 0
-#define NUM_LARGE_RINGS 0
 
 #define NUM_LEDS_PER_WHEEL 69
 #define NUM_LEDS_PER_SPOKE 60
-#define NUM_LEDS_PER_MED_RING 16
-#define NUM_LEDS_PER_LARGE_RING 24
 #define NUM_LEDS_PER_STRIP (NUM_LEDS_PER_WHEEL + NUM_LEDS_PER_SPOKE)
 #define NUM_LEDS_PER_PENT (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_PENT)
 #define NUM_PENT_LEDS (NUM_PENTS * NUM_LEDS_PER_PENT)
 #define NUM_LEDS_PER_BASE (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_BASE)
 #define NUM_BASE_LEDS (NUM_LEDS_PER_BASE * NUM_BASES)
-#define NUM_MED_RING_LEDS (NUM_LEDS_PER_MED_RING + NUM_MED_RINGS)
-#define NUM_LARGE_RING_LEDS (NUM_LEDS_PER_LARGE_RING + NUM_LARGE_RINGS)
-#define NUM_RING_LEDS (NUM_LARGE_RING_LEDS + NUM_MED_RING_LEDS)
-#define NUM_LEDS (NUM_BASE_LEDS + NUM_PENT_LEDS + NUM_RING_LEDS)
+#define NUM_LEDS (NUM_BASE_LEDS + NUM_PENT_LEDS)
 
 CRGB leds[NUM_LEDS];
 
@@ -70,32 +50,11 @@ bool gHue5 = false;
 bool gInverse = false;
 bool gPause = false;
 
-// Buttons.
-struct Button
-{
-    uint8_t pin;
-    uint8_t state;
-    bool canChangeState;
-    void (*callback)();
-    
-    Button(uint8_t pin) : pin (pin), state {0}, canChangeState {true}
-    {}
-};
-
-Button patternButton = { PATTERN_PIN };
-Button button1 = { BUTTON_PIN_1 };
-Button button2 = { BUTTON_PIN_2 };
-Button button3 = { BUTTON_PIN_3 };
-Button button4 = { BUTTON_PIN_4 }; 
-
-// Ring options.
-enum RingPosition { Top, Bottom, Full, Empty };
-enum RingSize { Large, Medium };
-
 void setup()
 {
     // initialize serial communication at 9600 bits per second:
     Serial.begin(9600);
+    Serial1.begin(9600);
     inputString.reserve(100);
 
     Serial.println("Serial port opened.");
@@ -107,11 +66,6 @@ void setup()
     LEDS.setBrightness(gBrightness);
 
     setupLedArrays();
-
-    setupButtons();
-
-    pinMode(PATTERN_PIN, INPUT);
-    pinMode(ANALOG_PIN_2, INPUT);
 }
 
 void setupLedArrays()
@@ -149,19 +103,12 @@ void setupLedArrays()
     }
 }
 
-void setupButtons()
-{  
-    patternButton.callback = nextPattern;
-}
-
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])(CRGB*[][NUM_PENTS], int);
 SimplePatternList gPatterns = {rainbow, rainbowWithGlitter, confetti, sinelon, bpm, juggle};
 
 void loop()
 {
-    checkButtonStates();
-
     checkModifiers();
 
     tryExecuteCommand();
@@ -224,7 +171,7 @@ int getNextPatternNumber()
 void nextPattern()
 {
     // Set to black.
-    setColor(CRGB::Black);
+    setColor(leds, NUM_LEDS, CRGB::Black);
     // add one to the current pattern number, and wrap around at the end
     gCurrentPatternNumber = getNextPatternNumber();
 
@@ -237,12 +184,12 @@ void nextPattern()
 
 void checkModifiers()
 {
-    setBrightness();
+    //setBrightness();
 }
 
 void setBrightness()
 {
-    gBrightness = getAnalogValue(BRIGHTNESS_PIN, gBrightness, 0, 100);
+    gBrightness = getAnalogValue(gBrightness, 0, 100);
     LEDS.setBrightness(gBrightness);
 
     #if DEBUG
@@ -263,7 +210,7 @@ void setInverse()
 
 void setFps()
 {
-    gFps = getAnalogValue(FPS_PIN, gFps, 500, 5000);
+    gFps = getAnalogValue(gFps, 500, 5000);
 
     #if DEBUG
         Serial.print("Setting FPS: ");
@@ -290,7 +237,7 @@ void setHue()
 
 void setFade()
 {
-    gFade = getAnalogValue(FADE_PIN, gFade, 3, 100);
+    gFade = getAnalogValue(gFade, 3, 100);
 
     #if DEBUG
         Serial.print("Setting Fade: ");
@@ -317,25 +264,11 @@ void setPause(bool isPaused)
 
 #pragma region PATTERNS
 
-void setColor(CRGB::HTMLColorCode color)
+void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
 {
-    for (int i = 0; i < NUM_PENT_LEDS; i++)
-    {
-        leds[i] = color;
-    }
-}
-
-void setRingColor(CRGB *ringLeds[], RingPosition position, RingSize size, CRGB::HTMLColorCode color)
-{
-    uint8_t numLeds = getNumRingLeds(position, size);
-
-    CRGB** leds = getRingLeds(ringLeds, position, size);
-
-    if (position == Empty) color = CRGB::Black;
-
     for (int i = 0; i < numLeds; i++)
     {
-        *leds[i] = color;
+        ledSets[i] = color;
     }
 }
 
@@ -474,81 +407,18 @@ CRGB* getLed(CRGB *ledSets[][NUM_PENTS], int setIndex, int pos)
     return ledSets[pos][setIndex];
 }
 
-CRGB** getRingLeds(CRGB *ringLeds[], RingPosition position, RingSize size)
-{
-    // If the position is full or empty, we'll want all of our lights.
-    if (position == Full || position == Empty) return ringLeds;
-
-    uint8_t numLeds = getNumRingLeds(position, size);
-
-    CRGB *halfLeds[numLeds];
-
-    for (int i = 0; i < numLeds; i++)
-    {
-        if (position == Top)
-        {
-            halfLeds[i] = ringLeds[i];
-        }
-        else
-        {
-            halfLeds[i] = ringLeds[i + numLeds];
-        }
-    }
-
-    return halfLeds;
-}
-
-uint8_t getNumRingLeds(RingPosition position, RingSize size)
-{
-    uint8_t numLeds = NUM_LEDS_PER_LARGE_RING;
-    if (size == Medium)
-    {
-        numLeds = NUM_LEDS_PER_MED_RING;
-    }
-
-    if (position == Top || position == Bottom)
-    {
-        return numLeds / 2;
-    }
-    else
-    {
-        return numLeds;
-    }
-}
-
 #pragma endregion PATTERNS
 
 #pragma region INPUTS
 
-void checkButtonStates()
-{
-    checkButtonState(&patternButton);
-}
-
-void checkButtonState(Button *button)
-{
-    // Read the state of the button pin.
-    button->state = digitalRead(button->pin);
-    // Check if the button is pressed. If it is, the buttonState is HIGH.
-    if (button->state == LOW && button->canChangeState) 
-    {
-        button->callback();
-        button->canChangeState = false;
-    }
-    else if (button->state == HIGH && !button->canChangeState)
-    {
-        button->canChangeState = true;
-    }
-}
-
-float getAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
+float getAnalogValue(float currVal, int32_t minVal, int32_t maxVal)
 {
     float val = currVal;
     
     if (!inputString.equals(""))
-        val = MeltdownLED.GetAnalogValue(inputString, currVal, minVal, maxVal);
-    else
-        val = MeltdownLED.GetAnalogValue(pin, currVal, minVal, maxVal);
+    {
+        val = MeltdownLED.GetSerialValue(inputString, currVal, minVal, maxVal);
+    }
 
     return val;
 }
@@ -647,11 +517,10 @@ bool getBoolValue()
 
 void serialEvent()
 {
-    while (Serial.available() && !inputStringComplete)
+    while (Serial1.available() && !inputStringComplete)
     {
         // get the new byte:
-        char inChar = (char)Serial.read();
-
+        char inChar = (char)Serial1.read();
         // add it to the inputString:
         inputString += inChar;
         // if the incoming character is a newline, set a flag
