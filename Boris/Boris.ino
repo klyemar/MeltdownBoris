@@ -42,6 +42,7 @@ uint8_t gBrightness = 96;
 uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
 uint16_t gFps = 1000;
 float gFade = 20;
+float gPos = 0;
 bool gHue1 = false;
 bool gHue2 = false;
 bool gHue3 = false;
@@ -49,6 +50,9 @@ bool gHue4 = false;
 bool gHue5 = false;
 bool gInverse = false;
 bool gPause = false;
+bool gActiveSpokes = false;
+bool gSpokesOnly = false;
+bool gWheelsOnly = true;
 
 void setup()
 {
@@ -115,15 +119,30 @@ void loop()
 
     if (!gPause)
     {
-        // Wheel pattern.
-        // Call the current pattern function once, updating the 'leds' array
-        gPatterns[gCurrentPatternNumber](ledWheelSets, NUM_LEDS_PER_WHEEL);
+        if (!gSpokesOnly)
+        {
+            // Wheel pattern.
+            // Call the current pattern function once, updating the 'leds' array
+            gPatterns[gCurrentPatternNumber](ledWheelSets, NUM_LEDS_PER_WHEEL);
+        }
+        else
+        {
+            setColor(ledWheelSets, NUM_LEDS_PER_WHEEL, CRGB::Black);
+        }
+
+        if (!gWheelsOnly)
+        {
+            // Spoke pattern.
+            // Call the current pattern function once, updating the 'leds' array
+            gPatterns[gCurrentPatternNumber](ledSpokeSets, NUM_LEDS_PER_SPOKE);
+        }
+        else
+        {
+            setColor(ledSpokeSets, NUM_LEDS_PER_SPOKE, CRGB::Black);
+        }
 
         if (gInverse) invert();
         
-        // Spoke pattern.
-        // Call the current pattern function once, updating the 'leds' array
-        gPatterns[getNextPatternNumber()](ledSpokeSets, NUM_LEDS_PER_SPOKE);
 
         // send the 'leds' array out to the actual LED strip
         LEDS.show();
@@ -133,6 +152,8 @@ void loop()
     LEDS.delay(1000 / gFps);
  
     //gutCheck();
+    EVERY_N_MILLISECONDS( 1 ) { gHue++; } // slowly cycle the "base color" through the rainbow
+    EVERY_N_SECONDS( 20 ) { nextPattern(); } // change patterns periodically
 }
 
 void gutCheck()
@@ -171,7 +192,7 @@ int getNextPatternNumber()
 void nextPattern()
 {
     // Set to black.
-    setColor(leds, NUM_LEDS, CRGB::Black);
+    setAllColor(leds, NUM_LEDS, CRGB::Black);
     // add one to the current pattern number, and wrap around at the end
     gCurrentPatternNumber = getNextPatternNumber();
 
@@ -247,7 +268,47 @@ void setFade()
 
 void setPosition()
 {
+    gPos = getAnalogValue(gPos, 0, 500);
 
+    #if DEBUG
+        Serial.print("Setting Position: ");
+        Serial.println(gPos);
+    #endif
+}
+
+void setSpokes(bool isActive)
+{
+    gActiveSpokes = isActive;
+
+    if (!isActive)
+    {
+        gSpokesOnly = false;
+    }
+
+    #if DEBUG
+        Serial.print("Setting spokes: ");
+        Serial.println(gActiveSpokes);
+    #endif
+}
+
+void setSpokesOnly(bool isActive)
+{
+    gSpokesOnly = isActive;
+
+    #if DEBUG
+        Serial.print("Setting spokes only: ");
+        Serial.println(gSpokesOnly);
+    #endif
+}
+
+void setWheelsOnly(bool isActive)
+{
+    gWheelsOnly = isActive;
+
+    #if DEBUG
+        Serial.print("Setting wheels only: ");
+        Serial.println(gWheelsOnly);
+    #endif
 }
 
 void setPause(bool isPaused)
@@ -264,7 +325,7 @@ void setPause(bool isPaused)
 
 #pragma region PATTERNS
 
-void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
+void setAllColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
 {
     for (int i = 0; i < numLeds; i++)
     {
@@ -272,10 +333,21 @@ void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
     }
 }
 
+void setColor(CRGB *ledSets[][NUM_PENTS], int numLeds, CRGB::HTMLColorCode color)
+{
+    for (int i = 0; i < NUM_PENTS; i++)
+    {
+        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
+        {
+            *getLed(ledSets, i, j) = color;
+        }
+    }
+}
+
 void rainbow(CRGB *ledSets[][NUM_PENTS], int numLeds)
 {
     // FastLED's built-in rainbow generator
-    fillRainbow(ledSets, numLeds, gHue, 7);
+    fillRainbow(ledSets, numLeds, gHue + gPos, 7);
 }
 
 void rainbowWithGlitter(CRGB *ledSets[][NUM_PENTS], int numLeds)
@@ -304,7 +376,7 @@ void confetti(CRGB *ledSets[][NUM_PENTS], int numLeds)
     int pos = random16(numLeds * NUM_STRIPS_PER_PENT);
     for (int i = 0; i < NUM_PENTS; i++)
     {
-        *getLed(ledSets, i, pos) += CHSV(gHue + random8(64), 200, 255);
+        *getLed(ledSets, i, getPosition(pos, numLeds * NUM_STRIPS_PER_PENT)) += CHSV(gHue + random8(64), 200, 255);
     }
 }
 
@@ -315,7 +387,7 @@ void sinelon(CRGB *ledSets[][NUM_PENTS], int numLeds)
     int pos = beatsin16(13, 0, (numLeds * NUM_STRIPS_PER_PENT) - 1);
     for (int i = 0; i < NUM_PENTS; i++)
     {
-        *getLed(ledSets, i, pos) += CHSV(gHue, 255, 192);
+        *getLed(ledSets, i, getPosition(pos, numLeds * NUM_STRIPS_PER_PENT)) += CHSV(gHue, 255, 192);
     }
 }
 
@@ -329,7 +401,7 @@ void bpm(CRGB *ledSets[][NUM_PENTS], int numLeds)
     { //9948
         for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
         {
-            *getLed(ledSets, i, j) = ColorFromPalette(palette, gHue + (j * 2), beat - gHue + (j* 10));
+            *getLed(ledSets, i, getPosition(j, numLeds * NUM_STRIPS_PER_PENT)) = ColorFromPalette(palette, gHue + (j * 2), beat - gHue + (j* 10));
         }
     }
 }
@@ -345,7 +417,7 @@ void juggle(CRGB *ledSets[][NUM_PENTS], int numLeds)
         for (int j = 0; j < 8; j++)
         {
             int pos = beatsin16(j + 7, 0, (numLeds * NUM_STRIPS_PER_PENT) - 1);
-            *getLed(ledSets, i, pos) |= CHSV(dothue, 200, 255);
+            *getLed(ledSets, i, getPosition(pos, numLeds * NUM_STRIPS_PER_PENT)) |= CHSV(dothue, 200, 255);
         }
         dothue += 32;
     }
@@ -400,6 +472,11 @@ void fillRainbow(CRGB *ledSets[][NUM_PENTS], uint16_t numLeds, uint8_t initialHu
             hsv.hue += deltaHue;
         }
     }
+}
+
+int getPosition(int pos, int numLeds)
+{
+    return (pos + (int)gPos) % numLeds;
 }
 
 CRGB* getLed(CRGB *ledSets[][NUM_PENTS], int setIndex, int pos)
@@ -483,6 +560,12 @@ void tryExecuteCommand()
             {}
             if (command.equals("INVR"))
                 setInverse();
+            if (command.equals("SPOK"))
+                setSpokes(getBoolValue());
+            if (command.equals("SPON"))
+                setSpokesOnly(getBoolValue());
+            if (command.equals("WHON"))
+                setWheelsOnly(getBoolValue());
         }
 
         inputString = "";

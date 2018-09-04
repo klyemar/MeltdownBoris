@@ -23,14 +23,24 @@
 #define BUTTON_PIN_10 11
 #define BUTTON_PIN_11 12
 #define BUTTON_PIN_12 13
+#define BUTTON_PIN_13 31
 #define ANALOG_PIN_1 A0
 #define ANALOG_PIN_2 A1
-#define ANALOG_PIN_3 A2
+#define ANALOG_PIN_3 A1
 
-#define PATTERN_PIN BUTTON_PIN_1
-#define BRIGHTNESS_PIN ANALOG_PIN_1
-#define FPS_PIN ANALOG_PIN_2
-#define FADE_PIN ANALOG_PIN_3
+#define PATTERN_PIN 33//BUTTON_PIN_1
+#define BOTH_PIN 32//BUTTON_PIN_1
+#define SPOKES_ONLY_PIN 34//BUTTON_PIN_3
+#define WHEELS_ONLY_PIN 35//BUTTON_PIN_4
+#define HUE1_PIN 36//BUTTON_PIN_1
+#define HUE2_PIN BUTTON_PIN_6
+#define HUE3_PIN BUTTON_PIN_7
+#define HUE4_PIN BUTTON_PIN_8
+#define HUE5_PIN BUTTON_PIN_9
+#define INVERSE_PIN BUTTON_PIN_1
+#define FADE_PIN ANALOG_PIN_2
+#define POS_PIN ANALOG_PIN_1
+//#define FPS_PIN ANALOG_PIN_3
 
 #define NUM_MED_RINGS 0
 #define NUM_LARGE_RINGS 0
@@ -52,6 +62,7 @@ uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gBrightness = 96;
 uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
 uint16_t gFps = 1000;
+float gPos = 0;
 float gFade = 20;
 bool gHue1 = false;
 bool gHue2 = false;
@@ -60,6 +71,9 @@ bool gHue4 = false;
 bool gHue5 = false;
 bool gInverse = false;
 bool gPause = false;
+bool gActiveSpokes = false;
+bool gSpokesOnly = false;
+bool gWheelsOnly = false;
 
 // Buttons.
 struct Button
@@ -74,10 +88,15 @@ struct Button
 };
 
 Button patternButton = { PATTERN_PIN };
-Button button1 = { BUTTON_PIN_1 };
-Button button2 = { BUTTON_PIN_2 };
-Button button3 = { BUTTON_PIN_3 };
-Button button4 = { BUTTON_PIN_4 }; 
+Button inverseButton = { INVERSE_PIN };
+Button bothButton = { BOTH_PIN };
+Button spokesOnlyButton = { SPOKES_ONLY_PIN };
+Button wheelsOnlyButton = { WHEELS_ONLY_PIN };
+Button hue1Button = { HUE1_PIN };
+Button hue2Button = { HUE2_PIN };
+Button hue3Button = { HUE3_PIN };
+Button hue4Button = { HUE4_PIN };
+Button hue5Button = { HUE5_PIN };
 
 // Ring options.
 enum RingPosition { Top, Bottom, Full, Empty };
@@ -116,7 +135,6 @@ void setup()
     pinMode(BUTTON_PIN_12, INPUT);
     pinMode(ANALOG_PIN_1, INPUT);
     pinMode(ANALOG_PIN_2, INPUT);
-    pinMode(ANALOG_PIN_3, INPUT);
 }
 
 void setupLedArrays()
@@ -140,6 +158,15 @@ void setupLedArrays()
 void setupButtons()
 {  
     patternButton.callback = nextPattern;
+    bothButton.callback = setBoth;
+    spokesOnlyButton.callback = setSpokesOnly;
+    wheelsOnlyButton.callback = setWheelsOnly;
+    hue1Button.callback = setHue1;
+    hue2Button.callback = setHue2;
+    hue3Button.callback = setHue3;
+    hue4Button.callback = setHue4;
+    hue5Button.callback = setHue5;
+    inverseButton.callback = setInverse;
 }
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
@@ -203,73 +230,103 @@ void nextPattern()
 
 void checkModifiers()
 {
-    setBrightness();
+    //setBrightness();
     // setFps();
-    // setFade();
+    setPosition();
+    //setFade();
 }
 
 void setBrightness()
 {
-    int32_t minVal = 0;
-    int32_t maxVal = 100;
-    float currVal = gBrightness;
+    // int32_t minVal = 0;
+    // int32_t maxVal = 100;
+    // float currVal = gBrightness;
 
-    gBrightness = MeltdownLED.GetAnalogValue(BRIGHTNESS_PIN, currVal, minVal, maxVal);
-    LEDS.setBrightness(gBrightness);
+    // gBrightness = MeltdownLED.GetAnalogValue(BRIGHTNESS_PIN, currVal, minVal, maxVal);
+    // LEDS.setBrightness(gBrightness);
 
-    if (MeltdownLED.HasChanged(currVal, gBrightness))
-    {
-    #if DEBUG
-        Serial.print("Setting Brightness: ");
-        Serial.println(gBrightness);
-    #endif
-        sendCommand("BRIT", gBrightness);
-    }
+    // if (MeltdownLED.HasChanged(currVal, gBrightness))
+    // {
+    // #if DEBUG
+    //     Serial.print("Setting Brightness: ");
+    //     Serial.println(gBrightness);
+    // #endif
+    //     sendCommand("BRIT", gBrightness);
+    // }
 }
 
 void setInverse()
 {
-    //gInverse = getBoolValue();
-
+    gInverse = !gInverse;
     #if DEBUG
         Serial.print("Setting Inverse: ");
         Serial.println(gInverse);
     #endif
+    sendCommand("INVR", gInverse);
 }
 
 void setFps()
 {
-    int32_t minVal = 500;
-    int32_t maxVal = 5000;
-    float currVal = gFps;
+    // int32_t minVal = 500;
+    // int32_t maxVal = 5000;
+    // float currVal = gFps;
 
-    gFps = MeltdownLED.GetAnalogValue(FPS_PIN, currVal, minVal, maxVal);
+    // gFps = MeltdownLED.GetAnalogValue(FPS_PIN, currVal, minVal, maxVal);
 
-    if (MeltdownLED.HasChanged(currVal, gFps))
-    {
-    #if DEBUG
-        Serial.print("Setting FPS: ");
-        Serial.println(gFps);
-    #endif
-        sendCommand("SPED", gFps);
-    }
+    // if (MeltdownLED.HasChanged(currVal, gFps))
+    // {
+    // #if DEBUG
+    //     Serial.print("Setting FPS: ");
+    //     Serial.println(gFps);
+    // #endif
+    //     sendCommand("SPED", gFps);
+    // }
 }
 
-void setHue()
-{
-    int val = 0;
-    if (gHue1) val++;
-    if (gHue2) val++;
-    if (gHue3) val++;
-    if (gHue4) val++;
-    if (gHue5) val++;
-
-    gHue = map(val, 0, 6, 0, 255);
-
+void setHue1() 
+{ 
+    gHue1 = !gHue1; 
     #if DEBUG
         Serial.print("Setting Hue: ");
-        Serial.println(gHue);
+        Serial.println(gHue1);
     #endif
+    sendCommand("HUE1", gHue1);
+}
+void setHue2()
+{ 
+    gHue2 = !gHue2; 
+    #if DEBUG
+        Serial.print("Setting Hue: ");
+        Serial.println(gHue2);
+    #endif
+    sendCommand("HUE2", gHue2);
+}
+void setHue3() 
+{ 
+    gHue3 = !gHue3; 
+    #if DEBUG
+        Serial.print("Setting Hue: ");
+        Serial.println(gHue3);
+    #endif
+    sendCommand("HUE3", gHue3);
+}
+void setHue4()
+{ 
+    gHue4 = !gHue4; 
+    #if DEBUG
+        Serial.print("Setting Hue: ");
+        Serial.println(gHue4);
+    #endif
+    sendCommand("HUE4", gHue4);
+}
+void setHue5() 
+{ 
+    gHue5 = !gHue5; 
+    #if DEBUG
+        Serial.print("Setting Hue: ");
+        Serial.println(gHue5);
+    #endif
+    sendCommand("HUE5", gHue5);
 }
 
 void setFade()
@@ -290,9 +347,56 @@ void setFade()
     }
 }
 
+void setBoth()
+{
+    gSpokesOnly = false;
+    gWheelsOnly = false;
+
+    #if DEBUG
+        Serial.print("Setting both...");
+    #endif
+    sendBoolCommand("SPON", false);
+    sendBoolCommand("WHON", false);
+}
+
+void setSpokesOnly()
+{
+    gSpokesOnly = !gSpokesOnly;
+
+    #if DEBUG
+        Serial.print("Setting spokes only: ");
+        Serial.println(gSpokesOnly);
+    #endif
+    sendBoolCommand("SPON", gSpokesOnly);
+}
+
+void setWheelsOnly()
+{
+    gWheelsOnly = !gWheelsOnly;
+
+    #if DEBUG
+        Serial.print("Setting wheels only: ");
+        Serial.println(gWheelsOnly);
+    #endif
+    sendBoolCommand("WHON", gWheelsOnly);
+}
+
 void setPosition()
 {
+    int32_t minVal = 0;
+    int32_t maxVal = 500;
+    float currVal = gPos;
 
+    gPos = MeltdownLED.GetAnalogValue(POS_PIN, currVal, minVal, maxVal);
+
+    if (MeltdownLED.HasChanged(currVal, gPos))
+    {
+        #if DEBUG
+            Serial.print("Setting Position: ");
+            Serial.println(gPos);
+        #endif
+        sendCommand("POSN", gPos);
+    }
 }
 
 void setPause(bool isPaused)
@@ -464,6 +568,15 @@ uint8_t getNumRingLeds(RingPosition position, RingSize size)
 void checkButtonStates()
 {
     checkButtonState(&patternButton);
+    checkButtonState(&bothButton);
+    checkButtonState(&spokesOnlyButton);
+    checkButtonState(&wheelsOnlyButton);
+    checkButtonState(&hue1Button);
+    checkButtonState(&hue2Button);
+    checkButtonState(&hue3Button);
+    checkButtonState(&hue4Button);
+    checkButtonState(&hue5Button);
+    checkButtonState(&inverseButton);
 }
 
 void checkButtonState(Button *button)
@@ -488,64 +601,6 @@ void checkButtonState(Button *button)
 
 void tryExecuteCommand()
 {
-    // if (inputStringComplete)
-    // {
-    //     inputStringComplete = false;
-
-    //     String command = getCommand();
-    //     if (!command.equals(""))
-    //     {
-    //         if (command.equals("BRIT"))
-    //             setBrightness();
-    //         if (command.equals("SPED"))
-    //             setFps();
-    //         if (command.equals("HUE1"))
-    //         {
-    //             gHue1 = getBoolValue();
-    //             setHue();
-    //         }
-    //         if (command.equals("HUE2"))
-    //         {
-    //             gHue2 = getBoolValue();
-    //             setHue();
-    //         }
-    //         if (command.equals("HUE3"))
-    //         {
-    //             gHue3 = getBoolValue();
-    //             setHue();
-    //         }
-    //         if (command.equals("HUE4"))
-    //         {
-    //             gHue4 = getBoolValue();
-    //             setHue();
-    //         }
-    //         if (command.equals("HUE5"))
-    //         {
-    //             gHue5 = getBoolValue();
-    //             setHue();
-    //         }
-    //         if (command.equals("PAUS"))
-    //             setPause(getBoolValue());
-    //         if (command.equals("FADE"))
-    //             setFade();
-    //         if (command.equals("POSN"))
-    //             setPosition();
-    //         if (command.equals("PTN1"))
-    //             nextPattern();
-    //         if (command.equals("PTN2"))
-    //         {}
-    //         if (command.equals("PTN3"))
-    //         {}
-    //         if (command.equals("PTN4"))
-    //         {}
-    //         if (command.equals("PTN5"))
-    //         {}
-    //         if (command.equals("INVR"))
-    //             setInverse();
-    //     }
-
-    //     inputString = "";
-    // }
 }
 
 void sendBoolCommand(String command, bool value)
