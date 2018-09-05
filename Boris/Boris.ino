@@ -37,19 +37,6 @@ String inputString = "";
 boolean inputStringComplete = false; // whether the String is complete
 
 // Global LED values.
-uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
-uint8_t gBrightness = 96;
-uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
-uint16_t gFps = 1000;
-float gFade = 20;
-float gPos = 0;
-bool gHue1 = false;
-bool gHue2 = false;
-bool gHue3 = false;
-bool gHue4 = false;
-bool gHue5 = false;
-bool gInverse = false;
-bool gPause = false;
 bool gActiveSpokes = false;
 bool gSpokesOnly = false;
 bool gWheelsOnly = true;
@@ -107,10 +94,6 @@ void setupLedArrays()
     }
 }
 
-// List of patterns to cycle through.  Each is defined as a separate function below.
-typedef void (*SimplePatternList[])(CRGB*[][NUM_PENTS], int);
-SimplePatternList gPatterns = {rainbow, rainbowWithGlitter, confetti, sinelon, bpm, juggle};
-
 void loop()
 {
     checkModifiers();
@@ -122,8 +105,12 @@ void loop()
         if (!gSpokesOnly)
         {
             // Wheel pattern.
-            // Call the current pattern function once, updating the 'leds' array
-            gPatterns[gCurrentPatternNumber](ledWheelSets, NUM_LEDS_PER_WHEEL);
+            for (uint8_t i; i < NUM_PENTS; i++)
+            {
+                CRGB *ledSet[] = ledWheelSets[i];
+                // Call the current pattern function once, updating the 'leds' array.
+                gPatterns[gCurrentPatternNumber](ledSet, NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
+            }
         }
         else
         {
@@ -133,8 +120,12 @@ void loop()
         if (!gWheelsOnly)
         {
             // Spoke pattern.
-            // Call the current pattern function once, updating the 'leds' array
-            gPatterns[gCurrentPatternNumber](ledSpokeSets, NUM_LEDS_PER_SPOKE);
+            for (uint8_t i; i < NUM_PENTS; i++)
+            {
+                CRGB *ledSet[] = ledSpokeSets[i];
+                // Call the current pattern function once, updating the 'leds' array.
+                gPatterns[gCurrentPatternNumber](ledSet, NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT);
+            }
         }
         else
         {
@@ -208,74 +199,6 @@ void checkModifiers()
     //setBrightness();
 }
 
-void setBrightness()
-{
-    gBrightness = getAnalogValue(gBrightness, 0, 100);
-    LEDS.setBrightness(gBrightness);
-
-    #if DEBUG
-        Serial.print("Setting Brightness: ");
-        Serial.println(gBrightness);
-    #endif
-}
-
-void setInverse()
-{
-    gInverse = getBoolValue();
-
-    #if DEBUG
-        Serial.print("Setting Inverse: ");
-        Serial.println(gInverse);
-    #endif
-}
-
-void setFps()
-{
-    gFps = getAnalogValue(gFps, 500, 5000);
-
-    #if DEBUG
-        Serial.print("Setting FPS: ");
-        Serial.println(gFps);
-    #endif
-}
-
-void setHue()
-{
-    int val = 0;
-    if (gHue1) val++;
-    if (gHue2) val++;
-    if (gHue3) val++;
-    if (gHue4) val++;
-    if (gHue5) val++;
-
-    gHue = map(val, 0, 6, 0, 255);
-
-    #if DEBUG
-        Serial.print("Setting Hue: ");
-        Serial.println(gHue);
-    #endif
-}
-
-void setFade()
-{
-    gFade = getAnalogValue(gFade, 3, 100);
-
-    #if DEBUG
-        Serial.print("Setting Fade: ");
-        Serial.println(gFade);
-    #endif
-}
-
-void setPosition()
-{
-    gPos = getAnalogValue(gPos, 0, 500);
-
-    #if DEBUG
-        Serial.print("Setting Position: ");
-        Serial.println(gPos);
-    #endif
-}
-
 void setSpokes(bool isActive)
 {
     gActiveSpokes = isActive;
@@ -311,180 +234,7 @@ void setWheelsOnly(bool isActive)
     #endif
 }
 
-void setPause(bool isPaused)
-{
-    gPause = isPaused;
-
-    #if DEBUG
-        Serial.print("Setting Pause: ");
-        Serial.println(gPause);
-    #endif
-}
-
 #pragma endregion SET MODIFIERS
-
-#pragma region PATTERNS
-
-void setAllColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
-{
-    for (int i = 0; i < numLeds; i++)
-    {
-        ledSets[i] = color;
-    }
-}
-
-void setColor(CRGB *ledSets[][NUM_PENTS], int numLeds, CRGB::HTMLColorCode color)
-{
-    for (int i = 0; i < NUM_PENTS; i++)
-    {
-        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
-        {
-            *getLed(ledSets, i, j) = color;
-        }
-    }
-}
-
-void rainbow(CRGB *ledSets[][NUM_PENTS], int numLeds)
-{
-    // FastLED's built-in rainbow generator
-    fillRainbow(ledSets, numLeds, gHue + gPos, 7);
-}
-
-void rainbowWithGlitter(CRGB *ledSets[][NUM_PENTS], int numLeds)
-{
-    // built-in FastLED rainbow, plus some random sparkly glitter
-    rainbow(ledSets, numLeds);
-    addGlitter(80, ledSets, numLeds);
-}
-
-void addGlitter(fract8 chanceOfGlitter, CRGB *ledSets[][NUM_PENTS], int numLeds)
-{
-    if (random8() < chanceOfGlitter)
-    {
-        for (int i = 0; i < NUM_PENTS; i++)
-        {
-            *getLed(ledSets, i, random16(numLeds * NUM_STRIPS_PER_PENT)) += CRGB::White;
-        }
-    }
-}
-
-void confetti(CRGB *ledSets[][NUM_PENTS], int numLeds)
-{
-    // random colored speckles that blink in and fade smoothly
-    fadeSetsToBlackBy(ledSets, numLeds, 1);
-
-    int pos = random16(numLeds * NUM_STRIPS_PER_PENT);
-    for (int i = 0; i < NUM_PENTS; i++)
-    {
-        *getLed(ledSets, i, getPosition(pos, numLeds * NUM_STRIPS_PER_PENT)) += CHSV(gHue + random8(64), 200, 255);
-    }
-}
-
-void sinelon(CRGB *ledSets[][NUM_PENTS], int numLeds)
-{
-    fadeSetsToBlackBy(ledSets, numLeds, 2);
-
-    int pos = beatsin16(13, 0, (numLeds * NUM_STRIPS_PER_PENT) - 1);
-    for (int i = 0; i < NUM_PENTS; i++)
-    {
-        *getLed(ledSets, i, getPosition(pos, numLeds * NUM_STRIPS_PER_PENT)) += CHSV(gHue, 255, 192);
-    }
-}
-
-void bpm(CRGB *ledSets[][NUM_PENTS], int numLeds)
-{
-    // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
-    uint8_t BeatsPerMinute = 62;
-    CRGBPalette16 palette = PartyColors_p;
-    uint8_t beat = beatsin8(BeatsPerMinute, 64, 255);
-    for (int i = 0; i < NUM_PENTS; i++)
-    { //9948
-        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
-        {
-            *getLed(ledSets, i, getPosition(j, numLeds * NUM_STRIPS_PER_PENT)) = ColorFromPalette(palette, gHue + (j * 2), beat - gHue + (j* 10));
-        }
-    }
-}
-
-void juggle(CRGB *ledSets[][NUM_PENTS], int numLeds)
-{
-    // eight colored dots, weaving in and out of sync with each other
-    fadeSetsToBlackBy(ledSets, numLeds, 2);
-
-    for (int i = 0; i < NUM_PENTS; i++)
-    {
-        byte dothue = 0;
-        for (int j = 0; j < 8; j++)
-        {
-            int pos = beatsin16(j + 7, 0, (numLeds * NUM_STRIPS_PER_PENT) - 1);
-            *getLed(ledSets, i, getPosition(pos, numLeds * NUM_STRIPS_PER_PENT)) |= CHSV(dothue, 200, 255);
-        }
-        dothue += 32;
-    }
-}
-
-void invert()
-{
-    if (gInverse)
-    {
-        for (int i = 0; i < NUM_PENT_LEDS; i++)
-        {
-            leds[i] = -leds[i];
-        }
-    }
-}
-
-void fadeSetsToBlackBy(CRGB *ledSets[][NUM_PENTS], uint16_t numLeds, uint8_t fade)
-{
-    for (int i = 0; i < NUM_PENTS; i++)
-    {
-        CRGB* ledSet[numLeds * NUM_STRIPS_PER_PENT];
-        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
-        {
-            ledSet[j] = ledSets[j][i];
-        }
-
-        for( int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++) 
-        {
-            uint8_t scale = 255 - (fade * gFade);
-            (*ledSet[j]).nscale8(scale);
-        }
-    }
-}
-
-void fillRainbow(CRGB *ledSets[][NUM_PENTS], uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
-{
-    for (int i = 0; i < NUM_PENTS; i++)
-    {
-        CRGB* ledSet[numLeds * NUM_STRIPS_PER_PENT];
-        for (int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++)
-        {
-            ledSet[j] = ledSets[j][i];
-        }
-
-        CHSV hsv;
-        hsv.hue = initialHue;
-        hsv.val = 255;
-        hsv.sat = 240;
-        for( int j = 0; j < numLeds * NUM_STRIPS_PER_PENT; j++) 
-        {
-            *ledSet[j] = hsv;
-            hsv.hue += deltaHue;
-        }
-    }
-}
-
-int getPosition(int pos, int numLeds)
-{
-    return (pos + (int)gPos) % numLeds;
-}
-
-CRGB* getLed(CRGB *ledSets[][NUM_PENTS], int setIndex, int pos)
-{
-    return ledSets[pos][setIndex];
-}
-
-#pragma endregion PATTERNS
 
 #pragma region INPUTS
 
