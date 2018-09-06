@@ -58,19 +58,6 @@ CRGB *ledLargeRingSets[NUM_LARGE_RINGS];
 CRGB *ledMedRingSets[NUM_MED_RINGS];
 
 // Global LED values.
-uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
-uint8_t gBrightness = 96;
-uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
-uint16_t gFps = 1000;
-float gPos = 0;
-float gFade = 20;
-bool gHue1 = false;
-bool gHue2 = false;
-bool gHue3 = false;
-bool gHue4 = false;
-bool gHue5 = false;
-bool gInverse = false;
-bool gPause = false;
 bool gActiveSpokes = false;
 bool gSpokesOnly = false;
 bool gWheelsOnly = false;
@@ -115,7 +102,7 @@ void setup()
     FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);  
 
     // set master brightness control
-    LEDS.setBrightness(gBrightness);
+    LEDS.setBrightness(MeltdownLED.GetBrightness());
 
     setupLedArrays();
 
@@ -161,17 +148,13 @@ void setupButtons()
     bothButton.callback = setBoth;
     spokesOnlyButton.callback = setSpokesOnly;
     wheelsOnlyButton.callback = setWheelsOnly;
-    hue1Button.callback = setHue1;
-    hue2Button.callback = setHue2;
-    hue3Button.callback = setHue3;
-    hue4Button.callback = setHue4;
-    hue5Button.callback = setHue5;
-    inverseButton.callback = setInverse;
+    hue1Button.callback = toggleHue1;
+    hue2Button.callback = toggleHue2;
+    hue3Button.callback = toggleHue3;
+    hue4Button.callback = toggleHue4;
+    hue5Button.callback = toggleHue5;
+    inverseButton.callback = toggleInverse;
 }
-
-// List of patterns to cycle through.  Each is defined as a separate function below.
-typedef void (*SimplePatternList[])(CRGB*[], int);
-SimplePatternList gPatterns = {rainbow, rainbowWithGlitter, confetti, sinelon, bpm, juggle};
 
 void loop()
 {
@@ -179,7 +162,7 @@ void loop()
 
     checkModifiers();
 
-    if (!gPause)
+    if (!MeltdownLED.GetPause())
     {
         // Wheel pattern.
         // Call the current pattern function once, updating the 'leds' array
@@ -206,19 +189,12 @@ void gutCheck()
    
 }
 
-#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
-
-int getNextPatternNumber()
-{
-    return (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
-}
-
 void nextPattern()
 {
     // Set to black.
     setColor(leds, NUM_LEDS, CRGB::Black);
-    // add one to the current pattern number, and wrap around at the end
-    gCurrentPatternNumber = getNextPatternNumber();
+    
+    MeltdownLED.NextPattern();
 
     #if DEBUG
         Serial.println("Next Pattern...");
@@ -255,14 +231,14 @@ void setBrightness()
     // }
 }
 
-void setInverse()
+void toggleInverse()
 {
-    gInverse = !gInverse;
+    bool inverseVal = MeltdownLED.ToggleInverse();
     #if DEBUG
         Serial.print("Setting Inverse: ");
-        Serial.println(gInverse);
+        Serial.println(inverseVal);
     #endif
-    sendCommand("INVR", gInverse);
+    sendCommand("INVR", inverseVal);
 }
 
 void setFps()
@@ -283,67 +259,33 @@ void setFps()
     // }
 }
 
-void setHue1() 
-{ 
-    gHue1 = !gHue1; 
+void toggleHue1() { toggleHue(1); }
+void toggleHue2() { toggleHue(2); }
+void toggleHue3() { toggleHue(3); }
+void toggleHue4() { toggleHue(4); }
+void toggleHue5() { toggleHue(5); }
+
+void toggleHue(uint8_t index)
+{
+    bool hueValue = MeltdownLED.ToggleHue(index);
     #if DEBUG
-        Serial.print("Setting Hue: ");
-        Serial.println(gHue1);
+        Serial.print("Toggling Hue...");
     #endif
-    sendCommand("HUE1", gHue1);
-}
-void setHue2()
-{ 
-    gHue2 = !gHue2; 
-    #if DEBUG
-        Serial.print("Setting Hue: ");
-        Serial.println(gHue2);
-    #endif
-    sendCommand("HUE2", gHue2);
-}
-void setHue3() 
-{ 
-    gHue3 = !gHue3; 
-    #if DEBUG
-        Serial.print("Setting Hue: ");
-        Serial.println(gHue3);
-    #endif
-    sendCommand("HUE3", gHue3);
-}
-void setHue4()
-{ 
-    gHue4 = !gHue4; 
-    #if DEBUG
-        Serial.print("Setting Hue: ");
-        Serial.println(gHue4);
-    #endif
-    sendCommand("HUE4", gHue4);
-}
-void setHue5() 
-{ 
-    gHue5 = !gHue5; 
-    #if DEBUG
-        Serial.print("Setting Hue: ");
-        Serial.println(gHue5);
-    #endif
-    sendCommand("HUE5", gHue5);
+    sendCommand("HUE" + index, hueValue);
 }
 
 void setFade()
 {
-    int32_t minVal = 3;
-    int32_t maxVal = 100;
-    float currVal = gFade;
+    float currVal = MeltdownLED.GetFade();
+    float fadeVal = MeltdownLED.SetFade(FADE_PIN);
 
-    gFade = MeltdownLED.GetAnalogValue(FADE_PIN, currVal, minVal, maxVal);
-
-    if (MeltdownLED.HasChanged(currVal, gFade))
+    if (MeltdownLED.HasChanged(currVal, fadeVal))
     {
     #if DEBUG
         Serial.print("Setting Fade: ");
-        Serial.println(gFade);
+        Serial.println(fadeVal);
     #endif
-        sendCommand("FADE", gFade);
+        sendCommand("FADE", fadeVal);
     }
 }
 
@@ -383,29 +325,26 @@ void setWheelsOnly()
 
 void setPosition()
 {
-    int32_t minVal = 0;
-    int32_t maxVal = 500;
-    float currVal = gPos;
+    float currVal = MeltdownLED.GetPosition();
+    float posVal = MeltdownLED.SetPosition(POS_PIN);
 
-    gPos = MeltdownLED.GetAnalogValue(POS_PIN, currVal, minVal, maxVal);
-
-    if (MeltdownLED.HasChanged(currVal, gPos))
+    if (MeltdownLED.HasChanged(currVal, posVal))
     {
         #if DEBUG
             Serial.print("Setting Position: ");
-            Serial.println(gPos);
+            Serial.println(posVal);
         #endif
-        sendCommand("POSN", gPos);
+        sendCommand("POSN", posVal);
     }
 }
 
 void setPause(bool isPaused)
 {
-    gPause = isPaused;
+    MeltdownLED.SetPause(isPaused);
 
     #if DEBUG
         Serial.print("Setting Pause: ");
-        Serial.println(gPause);
+        Serial.println(isPaused);
     #endif
 }
 
@@ -435,112 +374,28 @@ void setRingColor(CRGB *ringLeds[], RingPosition position, RingSize size, CRGB::
     }
 }
 
-void rainbow(CRGB *ledSets[], int numLeds)
-{
-    // FastLED's built-in rainbow generator
-    fill_rainbow(*ledSets, numLeds, gHue, 7);
-}
-
-void rainbowWithGlitter(CRGB *ledSets[], int numLeds)
-{
-    // built-in FastLED rainbow, plus some random sparkly glitter
-    rainbow(ledSets, numLeds);
-    addGlitter(80, ledSets, numLeds);
-}
-
-void addGlitter(fract8 chanceOfGlitter, CRGB *ledSets[], int numLeds)
-{
-    if (random8() < chanceOfGlitter)
-    {
-        *getLed(ledSets, random16(numLeds)) += CRGB::White;
-    }
-}
-
-void confetti(CRGB *ledSets[], int numLeds)
-{
-    // random colored speckles that blink in and fade smoothly
-    fadeToBlackBy(*ledSets, numLeds, gFade);
-
-    int pos = random16(numLeds);
-
-    *getLed(ledSets, pos) += CHSV(gHue + random8(64), 200, 255);
-}
-
-void sinelon(CRGB *ledSets[], int numLeds)
-{
-    fadeToBlackBy(*ledSets, numLeds, gFade);
-
-    int pos = beatsin16(13, 0, numLeds - 1);
-
-    *getLed(ledSets, pos) += CHSV(gHue, 255, 192);
-}
-
-void bpm(CRGB *ledSets[], int numLeds)
-{
-    // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
-    uint8_t BeatsPerMinute = 62;
-    CRGBPalette16 palette = PartyColors_p;
-    uint8_t beat = beatsin8(BeatsPerMinute, 64, 255);
-    
-    //9948
-    for (int i = 0; i < numLeds; i++)
-    {
-        *getLed(ledSets, i) = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i* 10));
-    }
-}
-
-void juggle(CRGB *ledSets[], int numLeds)
-{
-    // eight colored dots, weaving in and out of sync with each other
-    fadeToBlackBy(*ledSets, numLeds, gFade);
-
-    byte dothue = 0;
-    for (int i = 0; i < 8; i++)
-    {
-        int pos = beatsin16(i + 7, 0, (numLeds) - 1);
-        *getLed(ledSets, pos) |= CHSV(dothue, 200, 255);
-    }
-    dothue += 32;
-}
-
-void invert(CRGB ledSets[], int numLeds)
-{
-    if (gInverse)
-    {
-        for (int i = 0; i < numLeds; i++)
-        {
-            ledSets[i] = -ledSets[i];
-        }
-    }
-}
-
-CRGB* getLed(CRGB *ledSets[], int pos)
-{
-    return ledSets[pos];
-}
-
 CRGB** getRingLeds(CRGB *ringLeds[], RingPosition position, RingSize size)
 {
-    // If the position is full or empty, we'll want all of our lights.
-    if (position == Full || position == Empty) return ringLeds;
+    // // If the position is full or empty, we'll want all of our lights.
+    // if (position == Full || position == Empty) return ringLeds;
 
-    uint8_t numLeds = getNumRingLeds(position, size);
+    // uint8_t numLeds = getNumRingLeds(position, size);
 
-    CRGB *halfLeds[numLeds];
+    // CRGB *halfLeds[numLeds];
 
-    for (int i = 0; i < numLeds; i++)
-    {
-        if (position == Top)
-        {
-            halfLeds[i] = ringLeds[i];
-        }
-        else
-        {
-            halfLeds[i] = ringLeds[i + numLeds];
-        }
-    }
+    // for (int i = 0; i < numLeds; i++)
+    // {
+    //     if (position == Top)
+    //     {
+    //         halfLeds[i] = ringLeds[i];
+    //     }
+    //     else
+    //     {
+    //         halfLeds[i] = ringLeds[i + numLeds];
+    //     }
+    // }
 
-    return halfLeds;
+    // return halfLeds;
 }
 
 uint8_t getNumRingLeds(RingPosition position, RingSize size)
@@ -610,16 +465,7 @@ void sendBoolCommand(String command, bool value)
 
 void sendCommand(String command, float value)
 {
-    if (value < 0) value = 0;
-    if (value > 9999) value = 9999;
-
-    String valueString = "";
-    if (value < 1000) valueString += "0";
-    if (value < 100) valueString += "0";
-    if (value < 10) valueString += "0";
-    valueString += (uint16_t)value;
-
-    String serialCommand = "#" + command + valueString + "\n";
+    String serialCommand = MeltdownLED.PrepareCommand(command, value);
     
     if (Serial2.available())
     {

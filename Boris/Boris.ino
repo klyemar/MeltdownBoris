@@ -32,10 +32,6 @@ CRGB leds[NUM_LEDS];
 CRGB *ledWheelSets[NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT][NUM_PENTS];
 CRGB *ledSpokeSets[NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT][NUM_PENTS];
 
-// Serial input commands.
-String inputString = "";
-boolean inputStringComplete = false; // whether the String is complete
-
 // Global LED values.
 bool gActiveSpokes = false;
 bool gSpokesOnly = false;
@@ -68,12 +64,7 @@ void setupLedArrays()
             for (int k = 0; k < NUM_LEDS_PER_WHEEL; k++)
             {
                 #if DEBUG
-                    Serial.print("ledWheelSets[");
-                    Serial.print((j * NUM_LEDS_PER_WHEEL) + k);
-                    Serial.print("][");
-                    Serial.print(i);
-                    Serial.print("]: ");
-                    Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
+                    Serial.print("ledWheelSets["); Serial.print((j * NUM_LEDS_PER_WHEEL) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
                 #endif
                 ledWheelSets[(j * NUM_LEDS_PER_WHEEL) + k][i] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
             }
@@ -81,12 +72,7 @@ void setupLedArrays()
             for (int k = 0; k < NUM_LEDS_PER_SPOKE; k++)
             {
                 #if DEBUG
-                    Serial.print("ledSpokeSets[");
-                    Serial.print((j * NUM_LEDS_PER_SPOKE) + k);
-                    Serial.print("][");
-                    Serial.print(i);
-                    Serial.print("]: ");
-                    Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
+                    Serial.print("ledSpokeSets["); Serial.print((j * NUM_LEDS_PER_SPOKE) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
                 #endif
                 ledSpokeSets[(j * NUM_LEDS_PER_SPOKE) + k][i] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
             }
@@ -109,7 +95,7 @@ void loop()
             {
                 CRGB *ledSet[] = ledWheelSets[i];
                 // Call the current pattern function once, updating the 'leds' array.
-                gPatterns[gCurrentPatternNumber](ledSet, NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
+                MeltdownLED.ExecutePattern(ledSet, NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT)
             }
         }
         else
@@ -124,7 +110,7 @@ void loop()
             {
                 CRGB *ledSet[] = ledSpokeSets[i];
                 // Call the current pattern function once, updating the 'leds' array.
-                gPatterns[gCurrentPatternNumber](ledSet, NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT);
+                MeltdownLED.ExecutePattern(ledSet, NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT)
             }
         }
         else
@@ -134,7 +120,6 @@ void loop()
 
         if (gInverse) invert();
         
-
         // send the 'leds' array out to the actual LED strip
         LEDS.show();
     }
@@ -173,23 +158,12 @@ void gutCheck()
     LEDS.delay(10);
 }
 
-#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
-
-int getNextPatternNumber()
-{
-    return (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
-}
-
 void nextPattern()
 {
     // Set to black.
-    setAllColor(leds, NUM_LEDS, CRGB::Black);
-    // add one to the current pattern number, and wrap around at the end
-    gCurrentPatternNumber = getNextPatternNumber();
+    SetAllColor(leds, NUM_LEDS, CRGB::Black);
 
-    #if DEBUG
-        Serial.println("Next Pattern...");
-    #endif
+    MeltdownLED.NextPattern();
 }
 
 #pragma region SET MODIFIERS
@@ -235,22 +209,6 @@ void setWheelsOnly(bool isActive)
 }
 
 #pragma endregion SET MODIFIERS
-
-#pragma region INPUTS
-
-float getAnalogValue(float currVal, int32_t minVal, int32_t maxVal)
-{
-    float val = currVal;
-    
-    if (!inputString.equals(""))
-    {
-        val = MeltdownLED.GetSerialValue(inputString, currVal, minVal, maxVal);
-    }
-
-    return val;
-}
-
-#pragma endregion INPUTS
 
 #pragma region COMMANDS
 
@@ -320,32 +278,6 @@ void tryExecuteCommand()
 
         inputString = "";
     }
-}
-
-String getCommand()
-{
-    if (inputString[0] == '#' && inputString.length() >= 6)
-    {
-        return inputString.substring(1, 5);
-    }
-    return "";
-}
-
-int getValue()
-{    
-    int val = 0;
-    if (inputString[0] == '#' && inputString.length() >= 10)
-    {
-        String valString = inputString.substring(5, 9);
-        val = valString.toInt();
-    }
-    return val;
-}
-
-bool getBoolValue()
-{
-    int val = getValue();
-    return val != 0 ? true : false;
 }
 
 void serialEvent()

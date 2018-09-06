@@ -1,30 +1,36 @@
 #include <Arduino.h>
 #include <FastLED.h>
 
+#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
+
 class CMeltdownLED
 {
     public: CMeltdownLED();
 
     uint8_t m_analogTolerance;
 
+    // Serial input commands.
+    String _inputString;
+    boolean _inputStringComplete; // whether the String is complete
+
     // Global LED values.
     uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
     uint8_t gBrightness = 96;
     uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
     uint16_t gFps = 1000;
-    bool gInverse = false;
-    bool gPause = false;
-    float gFade = 20;
     float gPos = 0;
+    float gFade = 20;
     bool gHue1 = false;
     bool gHue2 = false;
     bool gHue3 = false;
     bool gHue4 = false;
     bool gHue5 = false;
+    bool gInverse = false;
+    bool gPause = false;
 
     // List of patterns to cycle through.  Each is defined as a separate function below.
-    typedef void (*SimplePatternList[])(CRGB*[], int);
-    SimplePatternList gPatterns = {rainbow, rainbowWithGlitter, confetti, sinelon, bpm, juggle};
+    typedef void (CMeltdownLED::*SimplePatternList)(CRGB*[], int);
+    SimplePatternList gPatterns[6] = {&CMeltdownLED::Rainbow, &CMeltdownLED::RainbowWithGlitter, &CMeltdownLED::Confetti, &CMeltdownLED::Sinelon, &CMeltdownLED::Bpm, &CMeltdownLED::Juggle};
 
     float GetAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
     {
@@ -85,38 +91,87 @@ class CMeltdownLED
     //     return newVal <= (oldVal - m_analogTolerance) || newVal >= (oldVal + m_analogTolerance);
     // }
 
-    void setBrightness()
+    int GetNextPatternNumber()
     {
-        gBrightness = getAnalogValue(gBrightness, 0, 100);
+        // TODO - Fix this.
+        // return (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
+        return (gCurrentPatternNumber + 1) % 6;
+    }
+
+    void NextPattern()
+    {
+        // add one to the current pattern number, and wrap around at the end
+        gCurrentPatternNumber = GetNextPatternNumber();
+    }
+
+    void ExecutePattern(CRGB *ledSet[], uint8_t numLeds)
+    {       
+        (this->*(gPatterns[gCurrentPatternNumber]))(ledSet, numLeds);
+    }
+
+    void SetBrightness()
+    {
+        gBrightness = GetAnalogValue(gBrightness, 0, 100);
         LEDS.setBrightness(gBrightness);
-
-        #if DEBUG
-            Serial.print("Setting Brightness: ");
-            Serial.println(gBrightness);
-        #endif
     }
 
-    void setInverse()
+    uint8_t GetBrightness()
     {
-        gInverse = getBoolValue();
-
-        #if DEBUG
-            Serial.print("Setting Inverse: ");
-            Serial.println(gInverse);
-        #endif
+        return gBrightness;
     }
 
-    void setFps()
+    bool ToggleInverse()
     {
-        gFps = getAnalogValue(gFps, 500, 5000);
-
-        #if DEBUG
-            Serial.print("Setting FPS: ");
-            Serial.println(gFps);
-        #endif
+        gInverse = !gInverse;
+        
+        return gInverse;
     }
 
-    void setHue()
+    void SetInverse()
+    {
+        gInverse = GetBoolValue();
+    }
+
+    bool GetInverse()
+    {
+        return gInverse;
+    }
+
+    void SetFps()
+    {
+        gFps = GetAnalogValue(gFps, 500, 5000);
+    }
+
+    uint16_t GetFps()
+    {
+        return gFps;
+    }
+
+    bool ToggleHue(uint8_t index)
+    {
+        switch(index)
+        {
+            case 1:
+                gHue1 = !gHue1;
+                return gHue1;
+            case 2:
+                gHue2 = !gHue2;
+                return gHue2;
+            case 3:
+                gHue3 = !gHue3;
+                return gHue3;
+            case 4:
+                gHue4 = !gHue4;
+                return gHue4;
+            case 5:
+                gHue5 = !gHue5;
+                return gHue5;
+            default:
+                return false;
+        }
+    }
+
+    void SetHue()
     {
         int val = 0;
         if (gHue1) val++;
@@ -126,46 +181,53 @@ class CMeltdownLED
         if (gHue5) val++;
 
         gHue = map(val, 0, 6, 0, 255);
-
-        #if DEBUG
-            Serial.print("Setting Hue: ");
-            Serial.println(gHue);
-        #endif
     }
 
-    void setFade()
+    float SetFade(uint8_t pin)
     {
-        gFade = getAnalogValue(gFade, 3, 100);
+        int32_t minVal = 3;
+        int32_t maxVal = 100;
+        float currVal = gFade;
 
-        #if DEBUG
-            Serial.print("Setting Fade: ");
-            Serial.println(gFade);
-        #endif
+        gFade = GetAnalogValue(pin, currVal, minVal, maxVal);
+
+        return gFade;
     }
 
-    void setPosition()
+    float GetFade()
     {
-        gPos = getAnalogValue(gPos, 0, 500);
-
-        #if DEBUG
-            Serial.print("Setting Position: ");
-            Serial.println(gPos);
-        #endif
+        return gFade;
     }
 
-    void setPause(bool isPaused)
+    float SetPosition(uint8_t pin)
+    {
+        int32_t minVal = 0;
+        int32_t maxVal = 500;
+        float currVal = gPos;
+
+        gPos = GetAnalogValue(pin, currVal, minVal, maxVal);
+
+        return gPos;
+    }
+
+    float GetPosition()
+    {
+        return gPos;
+    }
+
+    void SetPause(bool isPaused)
     {
         gPause = isPaused;
+    }
 
-        #if DEBUG
-            Serial.print("Setting Pause: ");
-            Serial.println(gPause);
-        #endif
+    bool GetPause()
+    {
+        return gPause;
     }
 
     #pragma region PATTERNS
 
-    void setAllColor(CRGB ledSet[], int numLeds, CRGB::HTMLColorCode color)
+    void SetAllColor(CRGB ledSet[], int numLeds, CRGB::HTMLColorCode color)
     {
         for (int i = 0; i < numLeds; i++)
         {
@@ -173,57 +235,57 @@ class CMeltdownLED
         }
     }
 
-    void setColor(CRGB *ledSet[], int numLeds, CRGB::HTMLColorCode color)
+    void SetColor(CRGB *ledSet[], int numLeds, CRGB::HTMLColorCode color)
     {
         for (int i = 0; i < numLeds; i++)
         {
-            *getLed(ledSet, i) = color;
+            *GetLed(ledSet, i) = color;
         }
     }
 
-    void rainbow(CRGB *ledSet[], int numLeds)
+    void Rainbow(CRGB *ledSet[], int numLeds)
     {
-        fillRainbow(ledSets, numLed, gHue + gPos, 7);
+        FillRainbow(ledSet, numLeds, gHue + gPos, 7);
     }
 
-    void rainbowWithGlitter(CRGB *ledSet[], int numLeds)
+    void RainbowWithGlitter(CRGB *ledSet[], int numLeds)
     {
-        rainbow(ledSet, numLeds);
+        Rainbow(ledSet, numLeds);
 
-        addGlitter(80, ledSet, numLeds);
+        AddGlitter(80, ledSet, numLeds);
     }
 
-    void addGlitter(fract8 chanceOfGlitter, CRGB *ledSet[], int numLeds)
+    void AddGlitter(fract8 chanceOfGlitter, CRGB *ledSet[], int numLeds)
     {
         if (random8() < chanceOfGlitter)
         {
             uint8_t pos = random16(numLeds);
-            *getLed(ledSet, pos) += CRGB::White;
+            *GetLed(ledSet, pos) += CRGB::White;
         }
     }
 
-    void confetti(CRGB *ledSet[], int numLeds)
+    void Confetti(CRGB *ledSet[], int numLeds)
     {
         // Random colored speckles that blink in and fade smoothly.
-        fadeSetsToBlackBy(ledSet, numLeds, 1);
+        FadeSetsToBlackBy(ledSet, numLeds, 1);
 
         int randLed = random16(numLeds);
-        uint8_t pos = getPosition(randLed, numLeds);
+        uint8_t pos = GetPosition(randLed, numLeds);
 
-        *getLed(ledSet, pos) += CHSV(gHue + random8(64), 200, 255);
+        *GetLed(ledSet, pos) += CHSV(gHue + random8(64), 200, 255);
     }
 
-    void sinelon(CRGB *ledSet[], int numLeds)
+    void Sinelon(CRGB *ledSet[], int numLeds)
     {
-        fadeSetsToBlackBy(ledSet, numLeds, 2);
+        FadeSetsToBlackBy(ledSet, numLeds, 2);
 
         uint8_t beat = beatsin16(13, 0, numLeds - 1);
-        uint8_t pos = getPosition(beat, numLeds);
+        uint8_t pos = GetPosition(beat, numLeds);
 
-        *getLed(ledSet, pos) += CHSV(gHue, 255, 192);
+        *GetLed(ledSet, pos) += CHSV(gHue, 255, 192);
     }
 
-    void bpm(CRGB *ledSet[], int numLeds)
+    void Bpm(CRGB *ledSet[], int numLeds)
     {
         // Colored stripes pulsing at a defined Beats-Per-Minute (BPM).
         CRGBPalette16 palette = PartyColors_p;
@@ -232,28 +294,28 @@ class CMeltdownLED
 
         for (int i = 0; i < numLeds; i++)
         {
-            uint8_t pos = getPosition(i, numLeds);
-            *getLed(ledSet, pos) = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+            uint8_t pos = GetPosition(i, numLeds);
+            *GetLed(ledSet, pos) = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
         }
     }
 
-    void juggle(CRGB *ledSet[], int numLeds)
+    void Juggle(CRGB *ledSet[], int numLeds)
     {
         // Eight colored dots, weaving in and out of sync with each other.
-        fadeSetsToBlackBy(ledSet, numLeds, 2);
+        FadeSetsToBlackBy(ledSet, numLeds, 2);
 
         byte dothue = 0;
         for (int i = 0; i < 8; i++)
         {
             uint8_t beat = beatsin16(i + 7, 0, numLeds - 1);
-            uint8_t pos = getPosition(beat, numLeds);
+            uint8_t pos = GetPosition(beat, numLeds);
 
-            *getLed(ledSet, pos) |= CHSV(dothue, 200, 255);
+            *GetLed(ledSet, pos) |= CHSV(dothue, 200, 255);
         }
         dothue += 32;
     }
 
-    void invert()
+    void Invert()
     {
         // if (gInverse)
         // {
@@ -264,7 +326,7 @@ class CMeltdownLED
         // }
     }
 
-    void fadeSetsToBlackBy(CRGB *ledSet[], uint16_t numLeds, uint8_t fade)
+    void FadeSetsToBlackBy(CRGB *ledSet[], uint16_t numLeds, uint8_t fade)
     {
         for( int i = 0; i < numLeds; i++) 
         {
@@ -273,7 +335,7 @@ class CMeltdownLED
         }
     }
 
-    void fillRainbow(CRGB *ledSet[], uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
+    void FillRainbow(CRGB *ledSet[], uint16_t numLeds, uint8_t initialHue, uint8_t deltaHue)
     {
         CHSV hsv;
         hsv.hue = initialHue;
@@ -286,17 +348,92 @@ class CMeltdownLED
         }
     }
 
-    int getPosition(int pos, int numLeds)
+    int GetPosition(int pos, int numLeds)
     {
         return (pos + (int)gPos) % numLeds;
     }
 
-    CRGB* getLed(CRGB *ledSets[], int pos)
+    CRGB* GetLed(CRGB *ledSet[], int pos)
     {
-        return ledSets[pos];
+        return ledSet[pos];
     }
 
     #pragma endregion PATTERNS
+
+    #pragma region INPUTS
+
+    float GetAnalogValue(float currVal, int32_t minVal, int32_t maxVal)
+    {
+        float val = currVal;
+        
+        if (!_inputString.equals(""))
+        {
+            val = GetSerialValue(_inputString, currVal, minVal, maxVal);
+        }
+
+        return val;
+    }
+
+    void SetInputString(String value)
+    {
+        _inputString = value;
+    }
+
+    void SetInputStringComplete(bool value)
+    {
+        _inputStringComplete = value;
+    }
+
+    String GetCommand()
+    {
+        if (_inputString[0] == '#' && _inputString.length() >= 6)
+        {
+            return _inputString.substring(1, 5);
+        }
+        return "";
+    }
+
+    int GetValue()
+    {    
+        int val = 0;
+        if (_inputString[0] == '#' && _inputString.length() >= 10)
+        {
+            String valString = _inputString.substring(5, 9);
+            val = valString.toInt();
+        }
+        return val;
+    }
+
+    bool GetBoolValue()
+    {
+        int val = GetValue();
+        return val != 0 ? true : false;
+    }
+
+    #pragma endregion INPUTS
+
+    #pragma region COMMANDS
+
+    String PrepareBoolCommand(String command, bool value)
+    {
+        return PrepareCommand(command, value ? 1 : 0);
+    }
+
+    String PrepareCommand(String command, float value)
+    {
+        if (value < 0) value = 0;
+        if (value > 9999) value = 9999;
+
+        String valueString = "";
+        if (value < 1000) valueString += "0";
+        if (value < 100) valueString += "0";
+        if (value < 10) valueString += "0";
+        valueString += (uint16_t)value;
+
+        return "#" + command + valueString + "\n";
+    }
+
+    #pragma endregion COMMANDS
 };
 
 extern CMeltdownLED MeltdownLED;
