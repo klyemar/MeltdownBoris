@@ -10,14 +10,14 @@ class CMeltdownLED
     uint8_t m_analogTolerance;
 
     // Serial input commands.
-    String _inputString;
-    boolean _inputStringComplete; // whether the String is complete
+    String m_inputString;
+    boolean m_inputStringComplete; // whether the String is complete
 
     // Global LED values.
     uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
-    uint8_t gBrightness = 96;
+    uint8_t gBrightness = 48;
     uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
-    uint16_t gFps = 1000;
+    uint16_t gFps = 500;
     float gPos = 0;
     float gFade = 20;
     bool gHue1 = false;
@@ -31,52 +31,6 @@ class CMeltdownLED
     // List of patterns to cycle through.  Each is defined as a separate function below.
     typedef void (CMeltdownLED::*SimplePatternList)(CRGB*[], int);
     SimplePatternList gPatterns[6] = {&CMeltdownLED::Rainbow, &CMeltdownLED::RainbowWithGlitter, &CMeltdownLED::Confetti, &CMeltdownLED::Sinelon, &CMeltdownLED::Bpm, &CMeltdownLED::Juggle};
-
-    float GetAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
-    {
-        uint16_t rawVal = analogRead(pin);
-        float normalizedVal = map(rawVal, 0, 1023, minVal, maxVal);
-
-        if (HasChanged(currVal, normalizedVal))
-        {
-            return normalizedVal;
-        }
-
-        return currVal;
-    }
-
-    float GetSerialValue(String inputString, float currVal, int32_t minVal, int32_t maxVal)
-    {
-        if (inputString[0] == '#' && inputString.length() >= 10)
-        {
-            String valString = inputString.substring(5, 9);
-            int val = valString.toInt();
-
-            // A value of 0 indicates an error but is acceptable if the intended value is actually 0.
-            if (val != 0 || valString.equals("0000"))
-            {
-                return val;
-            }
-        }
-
-        return currVal;
-    }
-
-    // Because an analog read can waiver between values, we need to determine if an analog value has changed enough
-    // for us to do anything about.
-    bool HasChanged(float oldVal, float newVal)
-    {
-        // If the value has changed to the min or max, return true regardless of tolerance.
-        // if ((oldVal != minVal && newVal == minVal) || (oldVal != maxVal && newVal == maxVal))
-        // {
-        //     return true;
-        // }
-        float normalizedOldVal = map(oldVal, 0, 1023, 0, 1023);
-        float normalizedNewVal = map(newVal, 0, 1023, 0, 1023);
-
-        // Otherwise, check that the value has surpassed the tolerance threshold.
-        return normalizedNewVal <= (normalizedOldVal - m_analogTolerance) || normalizedNewVal >= (normalizedOldVal + m_analogTolerance);
-    }
 
     // Because an analog read can waiver between values, we need to determine if an analog value has changed enough
     // for us to do anything about.
@@ -104,15 +58,21 @@ class CMeltdownLED
         gCurrentPatternNumber = GetNextPatternNumber();
     }
 
-    void ExecutePattern(CRGB *ledSet[], uint8_t numLeds)
+    void ExecutePattern(CRGB *ledSet[], int numLeds)
     {       
         (this->*(gPatterns[gCurrentPatternNumber]))(ledSet, numLeds);
     }
 
-    void SetBrightness()
+    uint8_t SetBrightness(uint8_t pin)
     {
-        gBrightness = GetAnalogValue(gBrightness, 0, 100);
+        int32_t minVal = 0;
+        int32_t maxVal = 100;
+        float currVal = gBrightness;
+
+        gBrightness = GetAnalogValue(pin, currVal, minVal, maxVal);
         LEDS.setBrightness(gBrightness);
+
+        return gBrightness;
     }
 
     uint8_t GetBrightness()
@@ -147,28 +107,40 @@ class CMeltdownLED
         return gFps;
     }
 
+    void IncrementHue(int factor)
+    {
+        gHue += factor;
+    }
+
     bool ToggleHue(uint8_t index)
     {
+        bool hueVal = false;
         switch(index)
         {
             case 1:
                 gHue1 = !gHue1;
-                return gHue1;
+                hueVal = gHue1;
             case 2:
                 gHue2 = !gHue2;
-                return gHue2;
+                hueVal = gHue2;
             case 3:
                 gHue3 = !gHue3;
-                return gHue3;
+                hueVal = gHue3;
             case 4:
                 gHue4 = !gHue4;
-                return gHue4;
+                hueVal = gHue4;
             case 5:
                 gHue5 = !gHue5;
-                return gHue5;
-            default:
-                return false;
+                hueVal = gHue5;
         }
+        SetHue();
+
+        return hueVal;
+    }
+
+    uint8_t GetHue()
+    {
+        return gHue;
     }
 
     void SetHue()
@@ -189,7 +161,14 @@ class CMeltdownLED
         int32_t maxVal = 100;
         float currVal = gFade;
 
-        gFade = GetAnalogValue(pin, currVal, minVal, maxVal);
+        if (pin > -1)
+        {
+            gFade = GetAnalogValue(pin, currVal, minVal, maxVal);
+        }
+        else
+        {
+            gFade = GetAnalogValue(currVal, minVal, maxVal);
+        }
 
         return gFade;
     }
@@ -205,7 +184,14 @@ class CMeltdownLED
         int32_t maxVal = 500;
         float currVal = gPos;
 
-        gPos = GetAnalogValue(pin, currVal, minVal, maxVal);
+        if (pin > -1)
+        {
+            gPos = GetAnalogValue(pin, currVal, minVal, maxVal);
+        }
+        else
+        {
+            gPos = GetAnalogValue(currVal, minVal, maxVal);
+        }
 
         return gPos;
     }
@@ -215,9 +201,16 @@ class CMeltdownLED
         return gPos;
     }
 
-    void SetPause(bool isPaused)
+    bool TogglePause()
     {
-        gPause = isPaused;
+        gPause = !gPause;
+
+        return gPause;
+    }
+
+    void SetPause()
+    {
+        gPause = GetBoolValue();
     }
 
     bool GetPause()
@@ -366,29 +359,90 @@ class CMeltdownLED
     {
         float val = currVal;
         
-        if (!_inputString.equals(""))
+        if (!m_inputString.equals(""))
         {
-            val = GetSerialValue(_inputString, currVal, minVal, maxVal);
+            val = GetSerialValue(m_inputString, currVal, minVal, maxVal);
         }
 
         return val;
     }
 
-    void SetInputString(String value)
+    float GetAnalogValue(uint8_t pin, float currVal, int32_t minVal, int32_t maxVal)
     {
-        _inputString = value;
+        uint16_t rawVal = analogRead(pin);
+        float normalizedVal = map(rawVal, 0, 1023, minVal, maxVal);
+
+        if (HasChanged(currVal, normalizedVal))
+        {
+            return normalizedVal;
+        }
+
+        return currVal;
+    }
+
+    float GetSerialValue(String inputString, float currVal, int32_t minVal, int32_t maxVal)
+    {
+        if (inputString[0] == '#' && inputString.length() >= 10)
+        {
+            String valString = inputString.substring(5, 9);
+            int val = valString.toInt();
+
+            // A value of 0 indicates an error but is acceptable if the intended value is actually 0.
+            if (val != 0 || valString.equals("0000"))
+            {
+                return val;
+            }
+        }
+
+        return currVal;
+    }
+
+    // Because an analog read can waiver between values, we need to determine if an analog value has changed enough
+    // for us to do anything about.
+    bool HasChanged(float oldVal, float newVal)
+    {
+        // If the value has changed to the min or max, return true regardless of tolerance.
+        // if ((oldVal != minVal && newVal == minVal) || (oldVal != maxVal && newVal == maxVal))
+        // {
+        //     return true;
+        // }
+        float normalizedOldVal = map(oldVal, 0, 1023, 0, 1023);
+        float normalizedNewVal = map(newVal, 0, 1023, 0, 1023);
+
+        // Otherwise, check that the value has surpassed the tolerance threshold.
+        return normalizedNewVal <= (normalizedOldVal - m_analogTolerance) || normalizedNewVal >= (normalizedOldVal + m_analogTolerance);
+    }
+
+    String GetInputString()
+    {
+        return m_inputString;
+    }
+
+    void ClearInputString()
+    {
+        m_inputString = "";
+    }
+
+    void AddCharToInputString(char inChar)
+    {
+        m_inputString += inChar;
+    }
+
+    bool GetInputStringComplete()
+    {
+        return m_inputStringComplete;
     }
 
     void SetInputStringComplete(bool value)
     {
-        _inputStringComplete = value;
+        m_inputStringComplete = value;
     }
 
     String GetCommand()
     {
-        if (_inputString[0] == '#' && _inputString.length() >= 6)
+        if (m_inputString[0] == '#' && m_inputString.length() >= 6)
         {
-            return _inputString.substring(1, 5);
+            return m_inputString.substring(1, 5);
         }
         return "";
     }
@@ -396,9 +450,9 @@ class CMeltdownLED
     int GetValue()
     {    
         int val = 0;
-        if (_inputString[0] == '#' && _inputString.length() >= 10)
+        if (m_inputString[0] == '#' && m_inputString.length() >= 10)
         {
-            String valString = _inputString.substring(5, 9);
+            String valString = m_inputString.substring(5, 9);
             val = valString.toInt();
         }
         return val;

@@ -13,7 +13,7 @@
 
 #define LED_TYPE OCTOWS2811
 
-#define NUM_PENTS 1
+#define NUM_PENTS 5
 #define NUM_STRIPS_PER_PENT 5
 #define NUM_BASES 0
 #define NUM_STRIPS_PER_BASE 0
@@ -29,8 +29,8 @@
 
 CRGB leds[NUM_LEDS];
 
-CRGB *ledWheelSets[NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT][NUM_PENTS];
-CRGB *ledSpokeSets[NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT][NUM_PENTS];
+CRGB *ledWheelSets[NUM_PENTS][NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT];
+//CRGB *ledSpokeSets[NUM_PENTS][NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT];
 
 // Global LED values.
 bool gActiveSpokes = false;
@@ -42,7 +42,6 @@ void setup()
     // initialize serial communication at 9600 bits per second:
     Serial.begin(9600);
     Serial1.begin(9600);
-    inputString.reserve(100);
 
     Serial.println("Serial port opened.");
     
@@ -50,7 +49,7 @@ void setup()
     LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_PENT);
 
     // set master brightness control
-    LEDS.setBrightness(gBrightness);
+    LEDS.setBrightness(MeltdownLED.GetBrightness());
 
     setupLedArrays();
 }
@@ -66,7 +65,7 @@ void setupLedArrays()
                 #if DEBUG
                     Serial.print("ledWheelSets["); Serial.print((j * NUM_LEDS_PER_WHEEL) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
                 #endif
-                ledWheelSets[(j * NUM_LEDS_PER_WHEEL) + k][i] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
+                ledWheelSets[i][(j * NUM_LEDS_PER_WHEEL) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
             }
 
             for (int k = 0; k < NUM_LEDS_PER_SPOKE; k++)
@@ -74,7 +73,7 @@ void setupLedArrays()
                 #if DEBUG
                     Serial.print("ledSpokeSets["); Serial.print((j * NUM_LEDS_PER_SPOKE) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
                 #endif
-                ledSpokeSets[(j * NUM_LEDS_PER_SPOKE) + k][i] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
+                //ledSpokeSets[i][(j * NUM_LEDS_PER_SPOKE) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
             }
         }
     }
@@ -86,50 +85,49 @@ void loop()
 
     tryExecuteCommand();
 
-    if (!gPause)
+    if (!MeltdownLED.GetPause())
     {
         if (!gSpokesOnly)
         {
             // Wheel pattern.
-            for (uint8_t i; i < NUM_PENTS; i++)
+            for (uint8_t i = 0; i < NUM_PENTS; i++)
             {
-                CRGB *ledSet[] = ledWheelSets[i];
                 // Call the current pattern function once, updating the 'leds' array.
-                MeltdownLED.ExecutePattern(ledSet, NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT)
+                MeltdownLED.ExecutePattern(ledWheelSets[i], NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
             }
         }
         else
         {
-            setColor(ledWheelSets, NUM_LEDS_PER_WHEEL, CRGB::Black);
+            //setColor(ledWheelSets, NUM_LEDS_PER_WHEEL, CRGB::Black);
         }
 
         if (!gWheelsOnly)
         {
             // Spoke pattern.
-            for (uint8_t i; i < NUM_PENTS; i++)
+            for (uint8_t i = 0; i < NUM_PENTS; i++)
             {
-                CRGB *ledSet[] = ledSpokeSets[i];
                 // Call the current pattern function once, updating the 'leds' array.
-                MeltdownLED.ExecutePattern(ledSet, NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT)
+                //MeltdownLED.ExecutePattern(ledSpokeSets[i], NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT);
             }
         }
         else
         {
-            setColor(ledSpokeSets, NUM_LEDS_PER_SPOKE, CRGB::Black);
+            //setColor(ledSpokeSets, NUM_LEDS_PER_SPOKE, CRGB::Black);
         }
 
-        if (gInverse) invert();
+        //if (gInverse) invert();
         
         // send the 'leds' array out to the actual LED strip
         LEDS.show();
     }
 
     // insert a delay to keep the framerate modest
-    LEDS.delay(1000 / gFps);
+    LEDS.delay(1000 / MeltdownLED.GetFps());
  
-    //gutCheck();
-    EVERY_N_MILLISECONDS( 1 ) { gHue++; } // slowly cycle the "base color" through the rainbow
+    EVERY_N_MILLISECONDS( 1 ) { MeltdownLED.IncrementHue(2); } // slowly cycle the "base color" through the rainbow
     EVERY_N_SECONDS( 20 ) { nextPattern(); } // change patterns periodically
+
+    //gutCheck();
 }
 
 void gutCheck()
@@ -161,7 +159,7 @@ void gutCheck()
 void nextPattern()
 {
     // Set to black.
-    SetAllColor(leds, NUM_LEDS, CRGB::Black);
+    MeltdownLED.SetAllColor(leds, NUM_LEDS, CRGB::Black);
 
     MeltdownLED.NextPattern();
 }
@@ -214,50 +212,83 @@ void setWheelsOnly(bool isActive)
 
 void tryExecuteCommand()
 {
-    if (inputStringComplete)
+    if (MeltdownLED.GetInputStringComplete())
     {
-        inputStringComplete = false;
+        MeltdownLED.SetInputStringComplete(false);
 
-        String command = getCommand();
+        String command = MeltdownLED.GetCommand();
         if (!command.equals(""))
         {
             if (command.equals("BRIT"))
-                setBrightness();
+                //MeltdownLED.SetBrightness();
             if (command.equals("SPED"))
-                setFps();
+            {
+                MeltdownLED.SetFps();
+            }
             if (command.equals("HUE1"))
             {
-                gHue1 = getBoolValue();
-                setHue();
+                MeltdownLED.ToggleHue(1);
+                #if DEBUG
+                Serial.print("Setting value: ");
+                Serial.println(MeltdownLED.GetHue());
+                #endif
             }
             if (command.equals("HUE2"))
             {
-                gHue2 = getBoolValue();
-                setHue();
+                MeltdownLED.ToggleHue(2);
+                #if DEBUG
+                Serial.print("Setting value: ");
+                Serial.println(MeltdownLED.GetHue());
+                #endif
             }
             if (command.equals("HUE3"))
             {
-                gHue3 = getBoolValue();
-                setHue();
+                MeltdownLED.ToggleHue(3);
+                #if DEBUG
+                Serial.print("Setting value: ");
+                Serial.println(MeltdownLED.GetHue());
+                #endif
             }
             if (command.equals("HUE4"))
             {
-                gHue4 = getBoolValue();
-                setHue();
+                MeltdownLED.ToggleHue(4);
+                #if DEBUG
+                Serial.print("Setting value: ");
+                Serial.println(MeltdownLED.GetHue());
+                #endif
             }
             if (command.equals("HUE5"))
             {
-                gHue5 = getBoolValue();
-                setHue();
+                MeltdownLED.ToggleHue(5);
+                #if DEBUG
+                Serial.print("Setting value: ");
+                Serial.println(MeltdownLED.GetHue());
+                #endif
             }
             if (command.equals("PAUS"))
-                setPause(getBoolValue());
+            {
+                MeltdownLED.SetPause();
+            }
             if (command.equals("FADE"))
-                setFade();
+            {
+                MeltdownLED.SetFade(-1);
+                #if DEBUG
+                Serial.print("Setting value: ");
+                Serial.println(MeltdownLED.GetFade());
+                #endif
+            }
             if (command.equals("POSN"))
-                setPosition();
+            {
+                MeltdownLED.SetPosition(-1);
+                #if DEBUG
+                Serial.print("Setting value: ");
+                Serial.println(MeltdownLED.GetPosition());
+                #endif
+            }
             if (command.equals("PTN1"))
+            {
                 nextPattern();
+            }
             if (command.equals("PTN2"))
             {}
             if (command.equals("PTN3"))
@@ -267,35 +298,45 @@ void tryExecuteCommand()
             if (command.equals("PTN5"))
             {}
             if (command.equals("INVR"))
-                setInverse();
+            {
+                MeltdownLED.SetInverse();
+            }
             if (command.equals("SPOK"))
-                setSpokes(getBoolValue());
+            {
+                setSpokes(MeltdownLED.GetBoolValue());
+            }
             if (command.equals("SPON"))
-                setSpokesOnly(getBoolValue());
+            {
+                setSpokesOnly(MeltdownLED.GetBoolValue());
+            }
             if (command.equals("WHON"))
-                setWheelsOnly(getBoolValue());
+            {
+                setWheelsOnly(MeltdownLED.GetBoolValue());
+            }
         }
 
-        inputString = "";
+        MeltdownLED.ClearInputString();
     }
 }
 
 void serialEvent()
 {
-    while (Serial1.available() && !inputStringComplete)
+    while (Serial1.available() && !MeltdownLED.GetInputStringComplete())
     {
         // get the new byte:
         char inChar = (char)Serial1.read();
         // add it to the inputString:
-        inputString += inChar;
+        MeltdownLED.AddCharToInputString(inChar);
         // if the incoming character is a newline, set a flag
         // so the main loop can do something about it:
         if (inChar == '\n')
         {
-            Serial.println("Received input string: " + inputString);
-            inputStringComplete = true;
+            Serial.println("Received input string: " + MeltdownLED.GetInputString());
+            MeltdownLED.SetInputStringComplete(true);
         }
     }
 }
 
 #pragma endregion COMMANDS
+
+

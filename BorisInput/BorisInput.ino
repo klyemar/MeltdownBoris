@@ -9,41 +9,43 @@
 
 #define DEBUG true
 
-#define DATA_PIN 22
+#define LARGE_RING_PIN_1 53
+#define LARGE_RING_PIN_2 51
 
-#define BUTTON_PIN_1 2
-#define BUTTON_PIN_2 3
-#define BUTTON_PIN_3 4
-#define BUTTON_PIN_4 5
-#define BUTTON_PIN_5 6
-#define BUTTON_PIN_6 7
-#define BUTTON_PIN_7 8
-#define BUTTON_PIN_8 9
-#define BUTTON_PIN_9 10
-#define BUTTON_PIN_10 11
-#define BUTTON_PIN_11 12
-#define BUTTON_PIN_12 13
-#define BUTTON_PIN_13 31
+#define BUTTON_PIN_1 22
+#define BUTTON_PIN_2 28
+#define BUTTON_PIN_3 30
+#define BUTTON_PIN_4 32
+#define BUTTON_PIN_5 34
+#define BUTTON_PIN_6 36
+#define BUTTON_PIN_7 38
+// #define BUTTON_PIN_8 40
+// #define BUTTON_PIN_9 42
+// #define BUTTON_PIN_10 11
+// #define BUTTON_PIN_11 12
+// #define BUTTON_PIN_12 13
+// #define BUTTON_PIN_13 31
 #define ANALOG_PIN_1 A0
 #define ANALOG_PIN_2 A1
-#define ANALOG_PIN_3 A1
+//#define ANALOG_PIN_3 A1
 
-#define PATTERN_PIN 33//BUTTON_PIN_1
-#define BOTH_PIN 32//BUTTON_PIN_1
-#define SPOKES_ONLY_PIN 34//BUTTON_PIN_3
-#define WHEELS_ONLY_PIN 35//BUTTON_PIN_4
-#define HUE1_PIN 36//BUTTON_PIN_1
+#define PATTERN_PIN BUTTON_PIN_2
+#define PAUSE_PIN 50 // BUTTON_PIN_2
+//#define BOTH_PIN BUTTON_PIN_2
+#define SPOKES_ONLY_PIN BUTTON_PIN_3
+#define WHEELS_ONLY_PIN BUTTON_PIN_4
+#define HUE1_PIN BUTTON_PIN_5
 #define HUE2_PIN BUTTON_PIN_6
 #define HUE3_PIN BUTTON_PIN_7
-#define HUE4_PIN BUTTON_PIN_8
-#define HUE5_PIN BUTTON_PIN_9
-#define INVERSE_PIN BUTTON_PIN_1
+//#define HUE4_PIN BUTTON_PIN_8
+//#define HUE5_PIN BUTTON_PIN_9
+//#define INVERSE_PIN BUTTON_PIN_1
 #define FADE_PIN ANALOG_PIN_2
 #define POS_PIN ANALOG_PIN_1
 //#define FPS_PIN ANALOG_PIN_3
 
 #define NUM_MED_RINGS 0
-#define NUM_LARGE_RINGS 0
+#define NUM_LARGE_RINGS 2
 
 #define NUM_LEDS_PER_MED_RING 16
 #define NUM_LEDS_PER_LARGE_RING 24
@@ -52,10 +54,11 @@
 #define NUM_RING_LEDS (NUM_LARGE_RING_LEDS + NUM_MED_RING_LEDS)
 #define NUM_LEDS (NUM_RING_LEDS)
 
-CRGB leds[NUM_LEDS];
+CRGB largeRingLeds1[NUM_LEDS_PER_LARGE_RING];
+CRGB largeRingLeds2[NUM_LEDS_PER_LARGE_RING];
 
-CRGB *ledLargeRingSets[NUM_LARGE_RINGS];
-CRGB *ledMedRingSets[NUM_MED_RINGS];
+CRGB *largeRing1[NUM_LEDS_PER_LARGE_RING];
+CRGB *largeRing2[NUM_LEDS_PER_LARGE_RING];
 
 // Global LED values.
 bool gActiveSpokes = false;
@@ -75,15 +78,16 @@ struct Button
 };
 
 Button patternButton = { PATTERN_PIN };
-Button inverseButton = { INVERSE_PIN };
-Button bothButton = { BOTH_PIN };
+//Button inverseButton = { INVERSE_PIN };
+//Button bothButton = { BOTH_PIN };
 Button spokesOnlyButton = { SPOKES_ONLY_PIN };
 Button wheelsOnlyButton = { WHEELS_ONLY_PIN };
 Button hue1Button = { HUE1_PIN };
 Button hue2Button = { HUE2_PIN };
 Button hue3Button = { HUE3_PIN };
-Button hue4Button = { HUE4_PIN };
-Button hue5Button = { HUE5_PIN };
+//Button hue4Button = { HUE4_PIN };
+//Button hue5Button = { HUE5_PIN };
+Button pauseButton = { PAUSE_PIN };
 
 // Ring options.
 enum RingPosition { Top, Bottom, Full, Empty };
@@ -99,7 +103,8 @@ void setup()
     
     delay(3000); // 3 second delay for recovery
     //FastLED
-    FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);  
+    FastLED.addLeds<WS2812, LARGE_RING_PIN_1, GRB>(largeRingLeds1, NUM_LEDS_PER_LARGE_RING);  
+    FastLED.addLeds<WS2812, LARGE_RING_PIN_2, GRB>(largeRingLeds2, NUM_LEDS_PER_LARGE_RING);  
 
     // set master brightness control
     LEDS.setBrightness(MeltdownLED.GetBrightness());
@@ -108,52 +113,37 @@ void setup()
 
     setupButtons();
 
-    pinMode(BUTTON_PIN_1, INPUT);
+    //pinMode(BUTTON_PIN_1, INPUT);
     pinMode(BUTTON_PIN_2, INPUT);
-    pinMode(BUTTON_PIN_3, INPUT);
-    pinMode(BUTTON_PIN_4, INPUT);
+    // pinMode(BUTTON_PIN_3, INPUT);
+    // pinMode(BUTTON_PIN_4, INPUT);
     pinMode(BUTTON_PIN_5, INPUT);
     pinMode(BUTTON_PIN_6, INPUT);
     pinMode(BUTTON_PIN_7, INPUT);
-    pinMode(BUTTON_PIN_8, INPUT);
-    pinMode(BUTTON_PIN_9, INPUT);
-    pinMode(BUTTON_PIN_10, INPUT);
-    pinMode(BUTTON_PIN_11, INPUT);
-    pinMode(BUTTON_PIN_12, INPUT);
+    // pinMode(BUTTON_PIN_8, INPUT);
+    // pinMode(BUTTON_PIN_9, INPUT);
+    // pinMode(BUTTON_PIN_10, INPUT);
+    // pinMode(BUTTON_PIN_11, INPUT);
+    // pinMode(BUTTON_PIN_12, INPUT);
     pinMode(ANALOG_PIN_1, INPUT);
     pinMode(ANALOG_PIN_2, INPUT);
-}
 
-void setupLedArrays()
-{
-    for (int i = 0; i < NUM_LARGE_RINGS; i++)
-    {
-        for (int j = 0; j < NUM_LEDS_PER_LARGE_RING; j++)
-        {
-            ledLargeRingSets[i] = &leds[(i * NUM_LEDS_PER_LARGE_RING) + j];
-        }
-    }
-    for (int i = 0; i < NUM_MED_RINGS; i++)
-    {
-        for (int j = 0; j < NUM_LEDS_PER_MED_RING; j++)
-        {
-            ledMedRingSets[i] = &leds[(i * NUM_LEDS_PER_MED_RING) + j];
-        }
-    }
+    MeltdownLED.NextPattern();
 }
 
 void setupButtons()
 {  
     patternButton.callback = nextPattern;
-    bothButton.callback = setBoth;
+    // bothButton.callback = setBoth;
     spokesOnlyButton.callback = setSpokesOnly;
     wheelsOnlyButton.callback = setWheelsOnly;
     hue1Button.callback = toggleHue1;
     hue2Button.callback = toggleHue2;
     hue3Button.callback = toggleHue3;
-    hue4Button.callback = toggleHue4;
-    hue5Button.callback = toggleHue5;
-    inverseButton.callback = toggleInverse;
+    //hue4Button.callback = toggleHue4;
+    // hue5Button.callback = toggleHue5;
+    //inverseButton.callback = toggleInverse;
+    pauseButton.callback = togglePause;
 }
 
 void loop()
@@ -166,33 +156,70 @@ void loop()
     {
         // Wheel pattern.
         // Call the current pattern function once, updating the 'leds' array
-        //gPatterns[gCurrentPatternNumber](ledLargeRingSets, NUM_LARGE_RING_LEDS);
+        MeltdownLED.ExecutePattern(largeRing1, NUM_LEDS_PER_LARGE_RING);
+        MeltdownLED.ExecutePattern(largeRing2, NUM_LEDS_PER_LARGE_RING);
 
         //if (gInverse) invert(leds, NUM_LEDS);
-        
-        // Spoke pattern.
-        // Call the current pattern function once, updating the 'leds' array
-        //gPatterns[getNextPatternNumber()](ledMedRingSets, NUM_MED_RING_LEDS);
 
         // send the 'leds' array out to the actual LED strip
-        //LEDS.show();
+        LEDS.show();
     }
 
+    //EVERY_N_SECONDS( 5. ) { MeltdownLED.NextPattern(); } // change patterns periodically
+
     // insert a delay to keep the framerate modest
-    //LEDS.delay(1000 / gFps);
+    LEDS.delay(1000 / MeltdownLED.GetFps());
  
+    MeltdownLED.IncrementHue(1);
+    
+    EVERY_N_SECONDS( 20 ) { nextPattern(); } // change patterns periodically
+
     //gutCheck();
 }
 
 void gutCheck()
 {   
-   
+    for (int i = 0; i < NUM_LEDS_PER_LARGE_RING; i++)
+    {
+        *largeRing1[i] = CRGB::Blue;
+    }
+    for (int i = 0; i < NUM_LEDS_PER_LARGE_RING; i++)
+    {
+        *largeRing2[i] = CRGB::Blue;
+    }
+    LEDS.show();
+}
+
+void setupLedArrays()
+{   
+    for (int i = 0; i < NUM_LEDS_PER_LARGE_RING; i++)
+    {
+        largeRing1[i] = &largeRingLeds1[i];
+    }
+    for (int i = 0; i < NUM_LEDS_PER_LARGE_RING; i++)
+    {
+        largeRing2[i] = &largeRingLeds2[i];
+    }
+    // for (int i = 0; i < NUM_LARGE_RINGS; i++)
+    // {
+    //     for (int j = 0; j < NUM_LEDS_PER_LARGE_RING; j++)
+    //     {
+    //         ledLargeRingSets[i] = &leds[(i * NUM_LEDS_PER_LARGE_RING) + j];
+    //     }
+    // }
+    // for (int i = 0; i < NUM_MED_RINGS; i++)
+    // {
+    //     for (int j = 0; j < NUM_LEDS_PER_MED_RING; j++)
+    //     {
+    //         ledMedRingSets[i] = &leds[(i * NUM_LEDS_PER_MED_RING) + j];
+    //     }
+    // }
 }
 
 void nextPattern()
 {
     // Set to black.
-    setColor(leds, NUM_LEDS, CRGB::Black);
+    setColor(largeRingLeds1, NUM_LEDS_PER_LARGE_RING, CRGB::Black);
     
     MeltdownLED.NextPattern();
 
@@ -209,26 +236,22 @@ void checkModifiers()
     //setBrightness();
     // setFps();
     setPosition();
-    //setFade();
+    setFade();
 }
 
 void setBrightness()
 {
-    // int32_t minVal = 0;
-    // int32_t maxVal = 100;
-    // float currVal = gBrightness;
+    uint8_t currVal = MeltdownLED.GetBrightness();
+    uint8_t brightVal = MeltdownLED.SetBrightness(-1);
 
-    // gBrightness = MeltdownLED.GetAnalogValue(BRIGHTNESS_PIN, currVal, minVal, maxVal);
-    // LEDS.setBrightness(gBrightness);
-
-    // if (MeltdownLED.HasChanged(currVal, gBrightness))
-    // {
-    // #if DEBUG
-    //     Serial.print("Setting Brightness: ");
-    //     Serial.println(gBrightness);
-    // #endif
-    //     sendCommand("BRIT", gBrightness);
-    // }
+    if (MeltdownLED.HasChanged(currVal, brightVal))
+    {
+    #if DEBUG
+        Serial.print("Setting Brightness: ");
+        Serial.println(brightVal);
+    #endif
+        sendCommand("BRIT", brightVal);
+    }
 }
 
 void toggleInverse()
@@ -269,9 +292,10 @@ void toggleHue(uint8_t index)
 {
     bool hueValue = MeltdownLED.ToggleHue(index);
     #if DEBUG
-        Serial.print("Toggling Hue...");
+        Serial.println("Toggling Hue...");
     #endif
-    sendCommand("HUE" + index, hueValue);
+    String command = "HUE";
+    sendCommand(command + index, hueValue);
 }
 
 void setFade()
@@ -338,14 +362,15 @@ void setPosition()
     }
 }
 
-void setPause(bool isPaused)
+void togglePause()
 {
-    MeltdownLED.SetPause(isPaused);
+    bool pauseVal = MeltdownLED.TogglePause();
 
     #if DEBUG
         Serial.print("Setting Pause: ");
-        Serial.println(isPaused);
+        Serial.println(pauseVal);
     #endif
+    sendCommand("PAUS", pauseVal);
 }
 
 #pragma endregion SET MODIFIERS
@@ -360,60 +385,33 @@ void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
     }
 }
 
-void setRingColor(CRGB *ringLeds[], RingPosition position, RingSize size, CRGB::HTMLColorCode color)
+void setRingColor(CRGB *ringLeds[], uint8_t numLeds, RingPosition position, CRGB::HTMLColorCode color)
 {
-    uint8_t numLeds = getNumRingLeds(position, size);
-
-    CRGB** leds = getRingLeds(ringLeds, position, size);
-
-    if (position == Empty) color = CRGB::Black;
-
     for (int i = 0; i < numLeds; i++)
     {
-        *leds[i] = color;
+        if (canColorRingLed(i + 1, numLeds, position))
+        {
+            *ringLeds[i] = color;
+        }
+        else
+        {
+            *ringLeds[i] = CRGB::Black;
+        }
     }
 }
 
-CRGB** getRingLeds(CRGB *ringLeds[], RingPosition position, RingSize size)
+bool canColorRingLed(uint8_t index, uint8_t numLeds, RingPosition position)
 {
-    // // If the position is full or empty, we'll want all of our lights.
-    // if (position == Full || position == Empty) return ringLeds;
+    if (position == Full)
+        return true;
+    if (position == Empty) 
+        return false;
+    if (position == Top) 
+        return index > (numLeds / 2);
+    if (position == Bottom) 
+        return index <= (numLeds / 2);
 
-    // uint8_t numLeds = getNumRingLeds(position, size);
-
-    // CRGB *halfLeds[numLeds];
-
-    // for (int i = 0; i < numLeds; i++)
-    // {
-    //     if (position == Top)
-    //     {
-    //         halfLeds[i] = ringLeds[i];
-    //     }
-    //     else
-    //     {
-    //         halfLeds[i] = ringLeds[i + numLeds];
-    //     }
-    // }
-
-    // return halfLeds;
-}
-
-uint8_t getNumRingLeds(RingPosition position, RingSize size)
-{
-    uint8_t numLeds = NUM_LEDS_PER_LARGE_RING;
-    if (size == Medium)
-    {
-        numLeds = NUM_LEDS_PER_MED_RING;
-    }
-
-    if (position == Top || position == Bottom)
-    {
-        return numLeds / 2;
-    }
-    else
-    {
-        return numLeds;
-    }
+    return false;
 }
 
 #pragma endregion PATTERNS
@@ -422,16 +420,20 @@ uint8_t getNumRingLeds(RingPosition position, RingSize size)
 
 void checkButtonStates()
 {
-    checkButtonState(&patternButton);
-    checkButtonState(&bothButton);
-    checkButtonState(&spokesOnlyButton);
-    checkButtonState(&wheelsOnlyButton);
-    checkButtonState(&hue1Button);
-    checkButtonState(&hue2Button);
-    checkButtonState(&hue3Button);
-    checkButtonState(&hue4Button);
-    checkButtonState(&hue5Button);
-    checkButtonState(&inverseButton);
+    EVERY_N_MILLISECONDS( 20 ) 
+    { 
+        //checkButtonState(&patternButton);
+        //checkButtonState(&pauseButton);
+        //checkButtonState(&bothButton);
+        // checkButtonState(&spokesOnlyButton);
+        // checkButtonState(&wheelsOnlyButton);
+        // checkButtonState(&hue1Button);
+        // checkButtonState(&hue2Button);
+        // checkButtonState(&hue3Button);
+        //checkButtonState(&hue4Button);
+        //checkButtonState(&hue5Button);
+        //checkButtonState(&inverseButton);
+    }
 }
 
 void checkButtonState(Button *button)
@@ -453,10 +455,6 @@ void checkButtonState(Button *button)
 #pragma endregion INPUTS
 
 #pragma region COMMANDS
-
-void tryExecuteCommand()
-{
-}
 
 void sendBoolCommand(String command, bool value)
 {
