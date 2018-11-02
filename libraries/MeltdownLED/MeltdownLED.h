@@ -17,7 +17,7 @@ class CMeltdownLED
     uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
     uint8_t gBrightness = 48;
     uint8_t gHue = 0;                  // rotating "base color" used by many of the patterns
-    uint16_t gFps = 500;
+    uint16_t gFps = 250;
     float gPos = 0;
     float gFade = 20;
     bool gHue1 = false;
@@ -157,8 +157,8 @@ class CMeltdownLED
 
     float SetFade(uint8_t pin)
     {
-        int32_t minVal = 3;
-        int32_t maxVal = 100;
+        int32_t minVal = 1;
+        int32_t maxVal = 40;
         float currVal = gFade;
 
         if (pin > -1)
@@ -181,7 +181,7 @@ class CMeltdownLED
     float SetPosition(uint8_t pin)
     {
         int32_t minVal = 0;
-        int32_t maxVal = 500;
+        int32_t maxVal = 24;
         float currVal = gPos;
 
         if (pin > -1)
@@ -270,7 +270,7 @@ class CMeltdownLED
 
     void Sinelon(CRGB *ledSet[], int numLeds)
     {
-        FadeSetsToBlackBy(ledSet, numLeds, 2);
+        FadeSetsToBlackBy(ledSet, numLeds, 1);
 
         uint8_t beat = beatsin16(13, 0, numLeds - 1);
         uint8_t pos = GetPosition(beat, numLeds);
@@ -295,7 +295,7 @@ class CMeltdownLED
     void Juggle(CRGB *ledSet[], int numLeds)
     {
         // Eight colored dots, weaving in and out of sync with each other.
-        FadeSetsToBlackBy(ledSet, numLeds, 2);
+        FadeSetsToBlackBy(ledSet, numLeds, 1);
 
         byte dothue = 0;
         for (int i = 0; i < 8; i++)
@@ -304,19 +304,16 @@ class CMeltdownLED
             uint8_t pos = GetPosition(beat, numLeds);
 
             *GetLed(ledSet, pos) |= CHSV(dothue, 200, 255);
+            dothue += 32;
         }
-        dothue += 32;
     }
 
-    void Invert()
+    void Invert(CRGB *ledSet[], uint16_t numLeds)
     {
-        // if (gInverse)
-        // {
-        //     for (int i = 0; i < NUM_PENT_LEDS; i++)
-        //     {
-        //         leds[i] = -leds[i];
-        //     }
-        // }
+        for (int i = 0; i < numLeds; i++)
+        {
+            *ledSet[i] = -*ledSet[i];
+        }
     }
 
     void FadeSetsToBlackBy(CRGB *ledSet[], uint16_t numLeds, uint8_t fade)
