@@ -18,31 +18,22 @@
 #define BUTTON_PIN_4 5
 #define BUTTON_PIN_5 6
 #define BUTTON_PIN_6 7
-// #define BUTTON_PIN_7 46
-// #define BUTTON_PIN_8 40
-// #define BUTTON_PIN_9 42
-// #define BUTTON_PIN_10 11
-// #define BUTTON_PIN_11 12
-// #define BUTTON_PIN_12 13
-// #define BUTTON_PIN_13 31
 #define ANALOG_PIN_1 A0
 #define ANALOG_PIN_2 A1
-//#define ANALOG_PIN_3 A1
 
 #define PATTERN_PIN BUTTON_PIN_1
 #define HUE1_PIN BUTTON_PIN_2
 #define HUE2_PIN BUTTON_PIN_3
 #define HUE3_PIN BUTTON_PIN_4
+//#define HUE4_PIN BUTTON_PIN_8
+//#define HUE5_PIN BUTTON_PIN_9
 #define PAUSE_PIN BUTTON_PIN_5
-#define INVERSE_PIN BUTTON_PIN_6
+#define MODE_PIN BUTTON_PIN_6
 // #define BOTH_PIN BUTTON_PIN_2
 // #define SPOKES_ONLY_PIN BUTTON_PIN_3
 // #define WHEELS_ONLY_PIN BUTTON_PIN_4
-//#define HUE4_PIN BUTTON_PIN_8
-//#define HUE5_PIN BUTTON_PIN_9
-#define FADE_PIN ANALOG_PIN_2
-#define POS_PIN ANALOG_PIN_1
-//#define FPS_PIN ANALOG_PIN_3
+#define ANALOG_PATTERN_PIN ANALOG_PIN_1
+#define ANALOG_MODE_PIN ANALOG_PIN_2
 
 #define NUM_MED_RINGS 1
 #define NUM_LARGE_RINGS 1
@@ -68,25 +59,23 @@ bool gWheelsOnly = false;
 // Buttons.
 struct Button
 {
-    uint8_t pin;
-    uint8_t state;
+    int pin;
+    int state;
     bool canChangeState;
     void (*callback)();
     
-    Button(uint8_t pin) : pin (pin), state {0}, canChangeState {true}
+    Button(int pin) : pin (pin), state {0}, canChangeState {false}
     {}
 };
 
 Button patternButton = { PATTERN_PIN };
-Button inverseButton = { INVERSE_PIN };
+Button modeButton = { MODE_PIN };
 // Button bothButton = { BOTH_PIN };
 // Button spokesOnlyButton = { SPOKES_ONLY_PIN };
 // Button wheelsOnlyButton = { WHEELS_ONLY_PIN };
 Button hue1Button = { HUE1_PIN };
 Button hue2Button = { HUE2_PIN };
 Button hue3Button = { HUE3_PIN };
-// //Button hue4Button = { HUE4_PIN };
-// //Button hue5Button = { HUE5_PIN };
 Button pauseButton = { PAUSE_PIN };
 
 // Ring options.
@@ -119,21 +108,14 @@ void setup()
     pinMode(BUTTON_PIN_4, INPUT);
     pinMode(BUTTON_PIN_5, INPUT);
     pinMode(BUTTON_PIN_6, INPUT);
-    // pinMode(BUTTON_PIN_7, INPUT);
-    // pinMode(BUTTON_PIN_8, INPUT);
-    // pinMode(BUTTON_PIN_9, INPUT);
-    // pinMode(BUTTON_PIN_10, INPUT);
-    // pinMode(BUTTON_PIN_11, INPUT);
-    // pinMode(BUTTON_PIN_12, INPUT);
     pinMode(ANALOG_PIN_1, INPUT);
     pinMode(ANALOG_PIN_2, INPUT);
-
-    MeltdownLED.NextPattern();
 }
 
 void setupButtons()
 {  
     patternButton.callback = nextPattern;
+    modeButton.callback = nextMode;
     // bothButton.callback = setBoth;
     // spokesOnlyButton.callback = setSpokesOnly;
     // wheelsOnlyButton.callback = setWheelsOnly;
@@ -142,7 +124,7 @@ void setupButtons()
     hue3Button.callback = toggleHue3;
     // //hue4Button.callback = toggleHue4;
     // // hue5Button.callback = toggleHue5;
-    inverseButton.callback = toggleInverse;
+    // inverseButton.callback = toggleInverse;
     pauseButton.callback = togglePause;
 }
 
@@ -158,12 +140,9 @@ void loop()
         // Call the current pattern function once, updating the 'leds' array
         MeltdownLED.ExecutePattern(ring1, NUM_LEDS_PER_LARGE_RING);
         MeltdownLED.ExecutePattern(ring2, NUM_LEDS_PER_MED_RING);
-
-        if (MeltdownLED.GetInverse())
-        {
-            MeltdownLED.Invert(ring1, NUM_LEDS_PER_LARGE_RING);
-            MeltdownLED.Invert(ring2, NUM_LEDS_PER_MED_RING);
-        }
+        
+        MeltdownLED.ExecuteMode(ring1, NUM_LEDS_PER_LARGE_RING);
+        MeltdownLED.ExecuteMode(ring2, NUM_LEDS_PER_MED_RING);
 
         // send the 'leds' array out to the actual LED strip
         LEDS.show();
@@ -171,8 +150,6 @@ void loop()
 
     // insert a delay to keep the framerate modest
     LEDS.delay(1000 / MeltdownLED.GetFps());
- 
-    // MeltdownLED.IncrementHue(1);
     
     // EVERY_N_SECONDS( 20 ) { nextPattern(); } // change patterns periodically
 
@@ -231,20 +208,31 @@ void nextPattern()
     sendBoolCommand("PTN1", true);
 }
 
+void nextMode()
+{
+    MeltdownLED.NextMode();
+
+    #if DEBUG
+        Serial.println("Next Mode...");
+    #endif
+    sendBoolCommand("MODE", true);
+}
+
 #pragma region SET MODIFIERS
 
 void checkModifiers()
 {
-    //setBrightness();
-    // setFps();
-    setPosition();
-    setFade();
+    EVERY_N_MILLISECONDS(20) 
+    { 
+        setAnalogPattern();
+        setAnalogMode();
+    }
 }
 
 void setBrightness()
 {
-    uint8_t currVal = MeltdownLED.GetBrightness();
-    uint8_t brightVal = MeltdownLED.SetBrightness(-1);
+    int currVal = MeltdownLED.GetBrightness();
+    int brightVal = MeltdownLED.SetBrightness(-1);
 
     if (MeltdownLED.HasChanged(currVal, brightVal))
     {
@@ -256,41 +244,13 @@ void setBrightness()
     }
 }
 
-void toggleInverse()
-{
-    bool inverseVal = MeltdownLED.ToggleInverse();
-    #if DEBUG
-        Serial.print("Setting Inverse: ");
-        Serial.println(inverseVal);
-    #endif
-    sendCommand("INVR", inverseVal);
-}
-
-void setFps()
-{
-    // int32_t minVal = 500;
-    // int32_t maxVal = 5000;
-    // float currVal = gFps;
-
-    // gFps = MeltdownLED.GetAnalogValue(FPS_PIN, currVal, minVal, maxVal);
-
-    // if (MeltdownLED.HasChanged(currVal, gFps))
-    // {
-    // #if DEBUG
-    //     Serial.print("Setting FPS: ");
-    //     Serial.println(gFps);
-    // #endif
-    //     sendCommand("SPED", gFps);
-    // }
-}
-
 void toggleHue1() { toggleHue(1); }
 void toggleHue2() { toggleHue(2); }
 void toggleHue3() { toggleHue(3); }
 void toggleHue4() { toggleHue(4); }
 void toggleHue5() { toggleHue(5); }
 
-void toggleHue(uint8_t index)
+void toggleHue(int index)
 {
     bool hueValue = MeltdownLED.ToggleHue(index);
     #if DEBUG
@@ -298,21 +258,6 @@ void toggleHue(uint8_t index)
     #endif
     String command = "HUE";
     sendCommand(command + index, hueValue);
-}
-
-void setFade()
-{
-    float currVal = MeltdownLED.GetFade();
-    float fadeVal = MeltdownLED.SetFade(FADE_PIN);
-
-    if (MeltdownLED.HasChanged(currVal, fadeVal))
-    {
-    #if DEBUG
-        Serial.print("Setting Fade: ");
-        Serial.println(fadeVal);
-    #endif
-        sendCommand("FADE", fadeVal);
-    }
 }
 
 void setBoth()
@@ -349,18 +294,33 @@ void setWheelsOnly()
     sendBoolCommand("WHON", gWheelsOnly);
 }
 
-void setPosition()
+void setAnalogPattern()
 {
-    float currVal = MeltdownLED.GetPosition();
-    float posVal = MeltdownLED.SetPosition(POS_PIN);
+    int currVal = MeltdownLED.GetAnalogPattern();
+    int patternVal = MeltdownLED.SetAnalogPattern(ANALOG_PATTERN_PIN);
 
-    if (MeltdownLED.HasChanged(currVal, posVal))
+    if (MeltdownLED.HasChanged(currVal, patternVal))
     {
         #if DEBUG
-            Serial.print("Setting Position: ");
-            Serial.println(posVal);
+            Serial.print("Setting Analog Pattern: ");
+            Serial.println(patternVal);
         #endif
-        sendCommand("POSN", posVal);
+        sendCommand("ANPT", patternVal);
+    }
+}
+
+void setAnalogMode()
+{
+    int currVal = MeltdownLED.GetAnalogMode();
+    int modeVal = MeltdownLED.SetAnalogMode(ANALOG_MODE_PIN);
+
+    if (MeltdownLED.HasChanged(currVal, modeVal))
+    {
+        #if DEBUG
+            Serial.print("Setting Analog Mode: ");
+            Serial.println(modeVal);
+        #endif
+        sendCommand("ANMD", modeVal);
     }
 }
 
@@ -387,7 +347,7 @@ void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
     }
 }
 
-void setRingColor(CRGB *ringLeds[], uint8_t numLeds, RingPosition position, CRGB::HTMLColorCode color)
+void setRingColor(CRGB *ringLeds[], int numLeds, RingPosition position, CRGB::HTMLColorCode color)
 {
     for (int i = 0; i < numLeds; i++)
     {
@@ -402,7 +362,7 @@ void setRingColor(CRGB *ringLeds[], uint8_t numLeds, RingPosition position, CRGB
     }
 }
 
-bool canColorRingLed(uint8_t index, uint8_t numLeds, RingPosition position)
+bool canColorRingLed(int index, int numLeds, RingPosition position)
 {
     if (position == Full)
         return true;
@@ -434,7 +394,8 @@ void checkButtonStates()
         checkButtonState(&hue3Button);
         //checkButtonState(&hue4Button);
         //checkButtonState(&hue5Button);
-        checkButtonState(&inverseButton);
+        // checkButtonState(&inverseButton);
+        checkButtonState(&modeButton);
     }
 }
 
@@ -463,7 +424,7 @@ void sendBoolCommand(String command, bool value)
     sendCommand(command, value ? 1 : 0);
 }
 
-void sendCommand(String command, float value)
+void sendCommand(String command, int value)
 {
     String serialCommand = MeltdownLED.PrepareCommand(command, value);
     
