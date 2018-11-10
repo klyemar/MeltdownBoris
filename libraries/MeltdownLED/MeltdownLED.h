@@ -15,13 +15,14 @@ class CMeltdownLED
 
     // Global LED values.
     int gCurrentPatternNumber = 0;
+    int gCurrentEffectNumber = 0;
     int gCurrentModeNumber = 0;
 
     int gBrightness = 48;
     int gHue = 0;                  
     int gFps = 500;
     long gAnalogPattern = 0;
-    long gAnalogMode = 0;
+    long gAnalogEffect = 0;
     long gPos = 0;
     long gFade = 20;
     bool gHue1 = false;
@@ -34,7 +35,7 @@ class CMeltdownLED
     bool gPause = false;
 
     // List of patterns to cycle through.  Each is defined as a separate function below.
-    typedef void (CMeltdownLED::*SimplePatternList)(CRGB*[], int);
+    typedef void (CMeltdownLED::*SimplePatternList)(CRGB[], int);
     SimplePatternList gPatterns[5] = {
         &CMeltdownLED::Rainbow, 
         &CMeltdownLED::Confetti, 
@@ -44,11 +45,10 @@ class CMeltdownLED
     };
 
     // List of modes to cycle through.  Each is defined as a separate function below.
-    typedef void (CMeltdownLED::*ModeList)(CRGB*[], int);
-    ModeList gModes[3] = {
-        &CMeltdownLED::NullMode, 
-        &CMeltdownLED::GlitterMode, 
-        &CMeltdownLED::InvertMode
+    typedef void (CMeltdownLED::*ModeList)(CRGB[], int);
+    ModeList gEffects[2] = {
+        &CMeltdownLED::NullEffect, 
+        &CMeltdownLED::GlitterEffect
     };
 
     // ANALOG //
@@ -59,15 +59,17 @@ class CMeltdownLED
         return gAnalogPattern;
     }
     int GetAnalogPattern() { return gAnalogPattern; }
+
     int GetAnalogPattern(int minVal, int maxVal) { return map(gAnalogPattern, 0, 1023, minVal, maxVal); }
 
-    int SetAnalogMode(int pin)
+    int SetAnalogEffect(int pin)
     {
-        gAnalogMode = GetAnalogValue(pin, gAnalogMode);
-        return gAnalogMode;
+        gAnalogEffect = GetAnalogValue(pin, gAnalogEffect);
+        return gAnalogEffect;
     }
-    int GetAnalogMode() { return gAnalogMode; }
-    int GetAnalogMode(int minVal, int maxVal) { return map(gAnalogMode, 0, 1023, minVal, maxVal); }
+    int GetAnalogEffect() { return gAnalogEffect; }
+    
+    int GetAnalogEffect(int minVal, int maxVal) { return map(gAnalogEffect, 0, 1023, minVal, maxVal); }
 
     // BRIGHTNESS //
 
@@ -79,6 +81,7 @@ class CMeltdownLED
         return gBrightness;
     }
     int GetBrightness() { return gBrightness; }
+
     int GetBrightness(int minVal, int maxVal) { return map(gBrightness, 0, 1023, minVal, maxVal); }
 
     // FPS //
@@ -133,44 +136,50 @@ class CMeltdownLED
         return gPause;
     }
     void SetPause() { gPause = GetBoolValue(); }
+
     bool GetPause() { return gPause; }
 
-    #pragma region MODES
+    #pragma region EFFECTS
 
-    int GetNextModeNumber()
+    int GetNextEffectNumber() { return (gCurrentEffectNumber + 1) % ARRAY_SIZE(gEffects); }
+
+    void NextEffect() { gCurrentEffectNumber = GetNextEffectNumber(); }
+
+    void ExecuteEffect(CRGB ledSet[], int numLeds) { (this->*(gEffects[gCurrentEffectNumber]))(ledSet, numLeds); }
+
+    void NullEffect(CRGB ledSet[], int numLeds) { }
+
+    void GlitterEffect(CRGB ledSet[], int numLeds)
     {
-        // TODO - Fix this.
-        // return (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
-        return (gCurrentModeNumber + 1) % 3;
-    }
-
-    void NextMode()
-    {
-        gCurrentModeNumber = GetNextModeNumber();
-    }
-
-    void ExecuteMode(CRGB *ledSet[], int numLeds)
-    {       
-        (this->*(gModes[gCurrentModeNumber]))(ledSet, numLeds);
-    }
-
-    void NullMode(CRGB *ledSet[], int numLeds) { }
-
-    void GlitterMode(CRGB *ledSet[], int numLeds)
-    {
-        int chanceOfGlitter = GetAnalogMode(0, 100);
+        int chanceOfGlitter = GetAnalogEffect(0, 75);
         if (random8() < chanceOfGlitter)
         {
             int pos = random16(numLeds);
-            *GetLed(ledSet, pos) += CRGB::White;
+            ledSet[pos] += CRGB::White;
         }
     }
 
-    void InvertMode(CRGB *ledSet[], int numLeds)
+    #pragma endregion EFFECTS
+
+    #pragma region MODES
+
+    int GetModeNumber(int numModes) { return gCurrentModeNumber % (numModes + 1); }
+
+    int NextMode() { return gCurrentModeNumber++; }
+
+    void Invert(CRGB ledSet[], int numLeds)
     {
         for (int i = 0; i < numLeds; i++)
         {
-            *ledSet[i] = -*ledSet[i];
+            ledSet[i] = -ledSet[i];
+        }
+    }
+
+    void MaximizeBrightness(CRGB ledSet[], int numLeds)
+    {
+        for (int i = 0; i < numLeds; i++)
+        {
+            ledSet[i].maximizeBrightness();
         }
     }
 
@@ -178,23 +187,11 @@ class CMeltdownLED
 
     #pragma region PATTERNS
 
-    int GetNextPatternNumber()
-    {
-        // TODO - Fix this.
-        // return (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns);
-        return (gCurrentPatternNumber + 1) % 5;
-    }
+    int GetNextPatternNumber() { return (gCurrentPatternNumber + 1) % ARRAY_SIZE(gPatterns); }
 
-    void NextPattern()
-    {
-        // add one to the current pattern number, and wrap around at the end
-        gCurrentPatternNumber = GetNextPatternNumber();
-    }
+    void NextPattern() { gCurrentPatternNumber = GetNextPatternNumber(); }
 
-    void ExecutePattern(CRGB *ledSet[], int numLeds)
-    {       
-        (this->*(gPatterns[gCurrentPatternNumber]))(ledSet, numLeds);
-    }
+    void ExecutePattern(CRGB ledSet[], int numLeds) { (this->*(gPatterns[gCurrentPatternNumber]))(ledSet, numLeds); }
 
     void SetAllColor(CRGB ledSet[], int numLeds, CRGB::HTMLColorCode color)
     {
@@ -204,54 +201,98 @@ class CMeltdownLED
         }
     }
 
-    void SetColor(CRGB *ledSet[], int numLeds, CRGB::HTMLColorCode color)
+    void SetColor(CRGB ledSet[], int numLeds, CRGB::HTMLColorCode color)
     {
         for (int i = 0; i < numLeds; i++)
         {
-            *GetLed(ledSet, i) = color;
+            ledSet[i] = color;
         }
     }
 
-    void Rainbow(CRGB *ledSet[], int numLeds)
+    void Rainbow(CRGB ledSet[], int numLeds)
     {
         int deltaHue = GetAnalogPattern(1, 15);
         FillRainbow(ledSet, numLeds, gHue + gPos, deltaHue);
+
+        // Modes
+        int numModes = 1;
+        switch (GetModeNumber(numModes))
+        {
+            case 1:
+                // Invert rainbox colors.
+                Invert(ledSet, numLeds);
+                break;
+        }
     }
 
-    void Confetti(CRGB *ledSet[], int numLeds)
+    void Confetti(CRGB ledSet[], int numLeds)
     {
         int fade = GetAnalogPattern(2, 30);
         FadeSetsToBlackBy(ledSet, numLeds, fade);
 
         int randLed = random16(numLeds);
-        *GetLed(ledSet, randLed) += CHSV(gHue + random8(64), 200, 255);
+        ledSet[randLed] += CHSV(gHue + random8(64), 200, 255);
+
+        // Modes
+        int numModes = 1;
+        switch (GetModeNumber(numModes))
+        {
+            case 1:
+                // Add a slight delay.
+                LEDS.delay(15);
+                break;
+        }
     }
 
-    void Sinelon(CRGB *ledSet[], int numLeds)
+    void Sinelon(CRGB ledSet[], int numLeds)
     {
+        // Display a dot moving back and forth in a sin wave pattern.
         int fade = GetAnalogPattern(2, 30);
         FadeSetsToBlackBy(ledSet, numLeds, fade);
 
         int pos = beatsin16(13, 0, numLeds - 1);
-        *GetLed(ledSet, pos) += CHSV(gHue, 255, 192);
+        ledSet[pos] += CHSV(gHue + 64, 255, 192);
+
+        // Modes
+        int numModes = 1;
+        switch (GetModeNumber(numModes))
+        {
+            case 1:
+                // Add a second, opposite dot moving in the opposite direction.
+                int altPos = (numLeds - 1) - (beatsin16(13, 0, numLeds - 1));
+                ledSet[altPos] += CHSV(gHue + 128, 255, 192);
+                break;
+        }
     }
 
-    void Bpm(CRGB *ledSet[], int numLeds)
+    void Bpm(CRGB ledSet[], int numLeds)
     {
         // Colored stripes pulsing at a defined Beats-Per-Minute (BPM).
-        CRGBPalette16 palette = PartyColors_p;
+        CRGBPalette16 palette;
+
+        // Modes, select palette color.
+        int numModes = 1;
+        switch (GetModeNumber(numModes))
+        {
+            case 1:
+                palette = ForestColors_p;
+                break;
+            default:
+                palette = PartyColors_p;
+                break;
+        }
 
         int bpm = 60;
-        int lower = GetAnalogPattern(0, 255);
+        int lower = GetAnalogPattern(0, 191);
 
         int beat = beatsin8(bpm, lower, 255);
         for (int i = 0; i < numLeds; i++)
         {
-            *GetLed(ledSet, i) = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+            ledSet[i] = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
         }
     }
 
-    void Juggle(CRGB *ledSet[], int numLeds)
+    void Juggle(CRGB ledSet[], int numLeds)
     {
         // Eight colored dots, weaving in and out of sync with each other.
         int fade = GetAnalogPattern(3, 100);
@@ -261,23 +302,31 @@ class CMeltdownLED
         for (int i = 0; i < 8; i++)
         {
             int beat = beatsin16(i + 7, 0, numLeds - 1);
-            int pos = CalculatePosition(beat, numLeds);
-
-            *GetLed(ledSet, pos) |= CHSV(dothue, 200, 255);
+            ledSet[beat] |= CHSV(dothue, 200, 255);
             dothue += 32;
+        }
+
+        // Modes
+        int numModes = 1;
+        switch (GetModeNumber(numModes))
+        {
+            case 1:
+                // Maximize the brightness of all colors.
+                MaximizeBrightness(ledSet, numLeds);
+                break;
         }
     }
 
-    void FadeSetsToBlackBy(CRGB *ledSet[], int numLeds, int fade)
+    void FadeSetsToBlackBy(CRGB ledSet[], int numLeds, int fade)
     {
         for( int i = 0; i < numLeds; i++) 
         {
             int scale = 255 - fade;
-            (*ledSet[i]).nscale8(scale);
+            ledSet[i].nscale8(scale);
         }
     }
 
-    void FillRainbow(CRGB *ledSet[], int numLeds, int initialHue, int deltaHue)
+    void FillRainbow(CRGB ledSet[], int numLeds, int initialHue, int deltaHue)
     {
         CHSV hsv;
         hsv.hue = initialHue;
@@ -285,19 +334,9 @@ class CMeltdownLED
         hsv.sat = 240;
         for( int i = 0; i < numLeds; i++) 
         {
-            *ledSet[i] = hsv;
+            ledSet[i] = hsv;
             hsv.hue += deltaHue;
         }
-    }
-
-    int CalculatePosition(int pos, int numLeds)
-    {
-        return (pos + gPos) % numLeds;
-    }
-
-    CRGB* GetLed(CRGB *ledSet[], int pos)
-    {
-        return ledSet[pos];
     }
 
     #pragma endregion PATTERNS
