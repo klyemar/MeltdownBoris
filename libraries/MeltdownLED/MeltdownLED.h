@@ -234,12 +234,21 @@ class CMeltdownLED
         ledSet[randLed] += CHSV(gHue + random8(64), 200, 255);
 
         // Modes
-        int numModes = 1;
+        int numModes = 3;
         switch (GetModeNumber(numModes))
         {
             case 1:
                 // Add a slight delay.
+                LEDS.delay(8);
+                break;
+            case 2:
                 LEDS.delay(15);
+                break;
+            case 3:
+                LEDS.delay(30);
+                break;
+            default:
+                LEDS.delay(3);
                 break;
         }
     }
@@ -254,13 +263,22 @@ class CMeltdownLED
         ledSet[pos] += CHSV(gHue + 64, 255, 192);
 
         // Modes
-        int numModes = 1;
+        int numModes = 3;
         switch (GetModeNumber(numModes))
         {
             case 1:
-                // Add a second, opposite dot moving in the opposite direction.
-                int altPos = (numLeds - 1) - (beatsin16(13, 0, numLeds - 1));
-                ledSet[altPos] += CHSV(gHue + 128, 255, 192);
+                {
+                    // Add a second, opposite dot moving in the opposite direction.
+                    int opppositePos = (numLeds - 1) - (beatsin16(13, 0, numLeds - 1));
+                    ledSet[opppositePos] += CHSV(gHue + 128, 255, 192);
+                }
+                break;
+            case 2:
+                ledSet[(pos + (int)(numLeds / 2)) % numLeds] += CHSV(gHue + 128, 255, 192);
+                break;
+            case 3:
+                ledSet[(pos + (int)(numLeds / 3)) % numLeds] += CHSV(gHue + 128, 255, 192);
+                ledSet[(pos + (int)(numLeds / 3 * 2)) % numLeds] += CHSV(gHue + 192, 255, 192);
                 break;
         }
     }
@@ -271,24 +289,33 @@ class CMeltdownLED
         CRGBPalette16 palette;
 
         // Modes, select palette color.
-        int numModes = 1;
+        int numModes = 4;
         switch (GetModeNumber(numModes))
         {
             case 1:
                 palette = ForestColors_p;
+                break;
+            case 2:
+                palette = CloudColors_p;
+                break;
+            case 3:
+                palette = HeatColors_p;
+                break;
+            case 4:
+                palette = RainbowColors_p;
                 break;
             default:
                 palette = PartyColors_p;
                 break;
         }
 
-        int bpm = 60;
-        int lower = GetAnalogPattern(0, 191);
 
-        int beat = beatsin8(bpm, lower, 255);
+        int bpm = 60;
+        int beat = beatsin8(bpm, 63, 255);
+        int multiplier = GetAnalogPattern(2, 12);
         for (int i = 0; i < numLeds; i++)
         {
-            ledSet[i] = ColorFromPalette(palette, gHue + (i * 2), beat - gHue + (i * 10));
+            ledSet[i] = ColorFromPalette(palette, gHue + (i * multiplier), beat - gHue + (i * 10));
         }
     }
 
