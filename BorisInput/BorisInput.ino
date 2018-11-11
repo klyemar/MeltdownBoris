@@ -60,9 +60,10 @@ struct Button
     int pin;
     int state;
     bool canChangeState;
+    bool isToggle;
     void (*callback)();
     
-    Button(int pin) : pin (pin), state {0}, canChangeState {false}
+    Button(int pin) : pin (pin), state {0}, canChangeState {false}, isToggle {true}
     {}
 };
 
@@ -120,8 +121,11 @@ void setupButtons()
     // spokesOnlyButton.callback = setSpokesOnly;
     // wheelsOnlyButton.callback = setWheelsOnly;
     hue1Button.callback = toggleHue1;
+    hue1Button.isToggle = false;
     hue2Button.callback = toggleHue2;
+    hue2Button.isToggle = false;
     hue3Button.callback = toggleHue3;
+    hue3Button.isToggle = false;
     // //hue4Button.callback = toggleHue4;
     // // hue5Button.callback = toggleHue5;
     // inverseButton.callback = toggleInverse;
@@ -411,6 +415,10 @@ void checkButtonState(Button *button)
     }
     else if (button->state == HIGH && !(button->canChangeState))
     {
+        if (!button->isToggle)
+        {
+            button->callback();
+        }
         button->canChangeState = true;
     }
 }
