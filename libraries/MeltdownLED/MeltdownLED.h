@@ -478,3 +478,20 @@ class CMeltdownLED
 };
 
 extern CMeltdownLED MeltdownLED;
+
+
+class CMeltdownLogger
+{
+    public: CMeltdownLogger();
+
+    Serial_ m_serial;
+
+    void InitSerial(Serial_ serial)
+    {
+        m_serial = serial;
+    }
+
+    void Print(string )
+};
+
+extern CMeltdownLogger MeltdownLogger;

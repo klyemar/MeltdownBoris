@@ -7,3 +7,9 @@ CMeltdownLED::CMeltdownLED() {
 
     m_inputString.reserve(100);
 }
+
+CMeltdownLogger MeltdownLogger;
+
+CMeltdownLogger::CMeltdownLogger() {
+    
+}
