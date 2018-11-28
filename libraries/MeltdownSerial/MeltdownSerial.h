@@ -155,7 +155,7 @@ class CMeltdownSerial
         if (serial2.available())
         {
             MeltdownLogger.Debug(serial1, "Sending command: ", serialCommand);   
-            for (uint i = 0; i < serialCommand.length(); i++)
+            for (uint8_t i = 0; i < serialCommand.length(); i++)
             {
                 serial2.write(serialCommand[i]);   // Push each char 1 by 1 on each loop pass.
             }
