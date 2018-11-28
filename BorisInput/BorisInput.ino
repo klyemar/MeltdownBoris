@@ -1,5 +1,7 @@
 #include <FastLED.h>
 #include <MeltdownLED.h>
+#include <MeltdownLogger.h>
+#include <MeltdownSerial.h>
 
 // Boris, short for Explora Borealis, is an interactive light display
 // controlled by several individual user inputs.
@@ -20,6 +22,8 @@
 #define BUTTON_PIN_6 32 // 7
 #define BUTTON_PIN_7 33 // 10
 #define BUTTON_PIN_8 34 // 11
+#define BUTTON_PIN_9 35 // 12
+#define BUTTON_PIN_10 36 // 13
 #define ANALOG_PIN_1 A0
 #define ANALOG_PIN_2 A1
 
@@ -28,7 +32,8 @@
 #define MODE_PIN BUTTON_PIN_3
 #define HUE1_PIN BUTTON_PIN_4
 #define HUE2_PIN BUTTON_PIN_5
-// #define HUE3_PIN BUTTON_PIN_4
+#define HUE3_PIN BUTTON_PIN_9
+#define HUE4_PIN BUTTON_PIN_10
 #define EFFECT_PIN BUTTON_PIN_6
 #define SPOKES_ONLY_PIN BUTTON_PIN_7
 #define WHEELS_ONLY_PIN BUTTON_PIN_8
@@ -74,7 +79,8 @@ Button spokesOnlyButton = { SPOKES_ONLY_PIN };
 Button wheelsOnlyButton = { WHEELS_ONLY_PIN };
 Button hue1Button = { HUE1_PIN };
 Button hue2Button = { HUE2_PIN };
-// Button hue3Button = { HUE3_PIN };
+Button hue3Button = { HUE3_PIN };
+Button hue4Button = { HUE4_PIN };
 Button pauseButton = { PAUSE_PIN };
 
 // Ring options.
@@ -88,6 +94,8 @@ void setup()
     Serial2.begin(9600);
 
     Serial.println("Serial port opened.");
+
+    MeltdownLogger.InitSerial(DEBUG);
     
     delay(3000); // 3 second delay for recovery
     //FastLED
@@ -110,6 +118,8 @@ void setup()
     pinMode(BUTTON_PIN_6, INPUT_PULLUP);
     pinMode(BUTTON_PIN_7, INPUT_PULLUP);
     pinMode(BUTTON_PIN_8, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_9, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_10, INPUT_PULLUP);
     pinMode(ANALOG_PIN_1, INPUT);
     pinMode(ANALOG_PIN_2, INPUT);
 }
@@ -125,11 +135,11 @@ void setupButtons()
     hue1Button.isToggle = false;
     hue2Button.callback = toggleHue2;
     hue2Button.isToggle = false;
-    // hue3Button.callback = toggleHue3;
-    // hue3Button.isToggle = false;
+    hue3Button.callback = toggleHue3;
+    hue3Button.isToggle = false;
+    hue4Button.callback = toggleHue4;
+    hue4Button.isToggle = false;
     pauseButton.callback = togglePause;
-    // hue4Button.callback = toggleHue4;
-    // hue5Button.callback = toggleHue5;
 }
 
 void loop()
@@ -179,35 +189,27 @@ void setupLedArrays()
 void nextPattern()
 {
     // Set to black.
-    setColor(ringLeds1, NUM_LEDS_PER_LARGE_RING, CRGB::Black);
-    
+    setColor(ringLeds1, NUM_LEDS_PER_LARGE_RING, CRGB::Black);  
     MeltdownLED.NextPattern();
 
-    #if DEBUG
-        Serial.println("Next Pattern...");
-    #endif
-    sendBoolCommand("PTN1", true);
+    MeltdownLogger.Debug(Serial, "Next Pattern...");  
+    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.PATTERN, true);
 }
 
 void nextEffect()
 {
     MeltdownLED.NextEffect();
 
-    #if DEBUG
-        Serial.println("Next Effect...");
-    #endif
-    sendBoolCommand("EFCT", true);
+    MeltdownLogger.Debug(Serial, "Next Effect...");  
+    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.EFFECT, true);
 }
 
 void nextMode()
 {
     int modeNumber = MeltdownLED.NextMode();
 
-    #if DEBUG
-        Serial.print("Next Mode: ");
-        Serial.println(modeNumber);
-    #endif
-    sendCommand("MODE", true);
+    MeltdownLogger.Debug(Serial, "Next Mode: ", modeNumber);
+    MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.MODE, true);
 }
 
 #pragma region SET MODIFIERS
@@ -226,13 +228,10 @@ void setBrightness()
     int currVal = MeltdownLED.GetBrightness();
     int brightVal = MeltdownLED.SetBrightness(-1);
 
-    if (MeltdownLED.HasChanged(currVal, brightVal))
+    if (MeltdownSerial.HasChanged(currVal, brightVal))
     {
-    #if DEBUG
-        Serial.print("Setting Brightness: ");
-        Serial.println(brightVal);
-    #endif
-        sendCommand("BRIT", brightVal);
+        MeltdownLogger.Debug(Serial, "Setting Brightness: ", brightVal);   
+        MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.BRIGHTNESS, brightVal);
     }
 }
 
@@ -240,16 +239,13 @@ void toggleHue1() { toggleHue(1); }
 void toggleHue2() { toggleHue(2); }
 void toggleHue3() { toggleHue(3); }
 void toggleHue4() { toggleHue(4); }
-void toggleHue5() { toggleHue(5); }
 
 void toggleHue(int index)
 {
     bool hueValue = MeltdownLED.ToggleHue(index);
-    #if DEBUG
-        Serial.println("Toggling Hue...");
-    #endif
-    String command = "HUE";
-    sendCommand(command + index, hueValue);
+    
+    MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);   
+    MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.HUE + index, hueValue);
 }
 
 void setBoth()
@@ -257,33 +253,25 @@ void setBoth()
     gSpokesOnly = false;
     gWheelsOnly = false;
 
-    #if DEBUG
-        Serial.print("Setting both...");
-    #endif
-    sendBoolCommand("SPON", false);
-    sendBoolCommand("WHON", false);
+    MeltdownLogger.Debug(Serial, "Setting both...");   
+    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, false);
+    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, false);
 }
 
 void setSpokesOnly()
 {
     gSpokesOnly = !gSpokesOnly;
 
-    #if DEBUG
-        Serial.print("Setting spokes only: ");
-        Serial.println(gSpokesOnly);
-    #endif
-    sendBoolCommand("SPON", gSpokesOnly);
+    MeltdownLogger.Debug(Serial, "Setting spokes only: ", gSpokesOnly);   
+    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, gSpokesOnly);
 }
 
 void setWheelsOnly()
 {
     gWheelsOnly = !gWheelsOnly;
 
-    #if DEBUG
-        Serial.print("Setting wheels only: ");
-        Serial.println(gWheelsOnly);
-    #endif
-    sendBoolCommand("WHON", gWheelsOnly);
+    MeltdownLogger.Debug(Serial, "Setting wheels only: ", gWheelsOnly);   
+    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, gWheelsOnly);
 }
 
 void setAnalogPattern()
@@ -291,13 +279,10 @@ void setAnalogPattern()
     int currVal = MeltdownLED.GetAnalogPattern();
     int patternVal = MeltdownLED.SetAnalogPattern(ANALOG_PATTERN_PIN);
 
-    if (MeltdownLED.HasChanged(currVal, patternVal))
+    if (MeltdownSerial.HasChanged(currVal, patternVal))
     {
-        #if DEBUG
-            Serial.print("Setting Analog Pattern: ");
-            Serial.println(patternVal);
-        #endif
-        sendCommand("ANPT", patternVal);
+        MeltdownLogger.Debug(Serial, "Setting Analog Pattern: ", patternVal);   
+        MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.ANALOG_PATTERN, patternVal);
     }
 }
 
@@ -306,13 +291,10 @@ void setAnalogEffect()
     int currVal = MeltdownLED.GetAnalogEffect();
     int modeVal = MeltdownLED.SetAnalogEffect(ANALOG_EFFECT_PIN);
 
-    if (MeltdownLED.HasChanged(currVal, modeVal))
+    if (MeltdownSerial.HasChanged(currVal, modeVal))
     {
-        #if DEBUG
-            Serial.print("Setting Analog Effect: ");
-            Serial.println(modeVal);
-        #endif
-        sendCommand("ANEF", modeVal);
+        MeltdownLogger.Debug(Serial, "Setting Analog Effect: ", modeVal);   
+        MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.ANALOG_EFFECT, modeVal);
     }
 }
 
@@ -320,11 +302,8 @@ void togglePause()
 {
     bool pauseVal = MeltdownLED.TogglePause();
 
-    #if DEBUG
-        Serial.print("Setting Pause: ");
-        Serial.println(pauseVal);
-    #endif
-    sendCommand("PAUS", pauseVal);
+    MeltdownLogger.Debug(Serial, "Setting Pause: ", pauseVal);   
+    MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.PAUSE, pauseVal);
 }
 
 #pragma endregion SET MODIFIERS
@@ -384,9 +363,8 @@ void checkButtonStates()
         checkButtonState(&wheelsOnlyButton);
         checkButtonState(&hue1Button);
         checkButtonState(&hue2Button);
-        // checkButtonState(&hue3Button);
-        //checkButtonState(&hue4Button);
-        //checkButtonState(&hue5Button);
+        checkButtonState(&hue3Button);
+        checkButtonState(&hue4Button);
     }
 }
 
@@ -411,26 +389,3 @@ void checkButtonState(Button *button)
 }
 
 #pragma endregion INPUTS
-
-#pragma region COMMANDS
-
-void sendBoolCommand(String command, bool value)
-{
-    sendCommand(command, value ? 1 : 0);
-}
-
-void sendCommand(String command, int value)
-{
-    String serialCommand = MeltdownLED.PrepareCommand(command, value);
-    
-    if (Serial2.available())
-    {
-        Serial.print("Sending command: " + serialCommand);
-        for (int i = 0; i < serialCommand.length(); i++)
-        {
-            Serial2.write(serialCommand[i]);   // Push each char 1 by 1 on each loop pass.
-        }
-    }
-}
-
-#pragma endregion COMMANDS
