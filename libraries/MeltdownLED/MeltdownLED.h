@@ -199,14 +199,6 @@ class CMeltdownLED
         }
     }
 
-    void SetColor(CRGB ledSet[], int numLeds, CRGB::HTMLColorCode color)
-    {
-        for (int i = 0; i < numLeds; i++)
-        {
-            ledSet[i] = color;
-        }
-    }
-
     void Rainbow(CRGB ledSet[], int numLeds)
     {
         int deltaHue = GetAnalogPattern(1, 15);

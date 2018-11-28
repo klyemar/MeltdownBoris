@@ -30,13 +30,20 @@ class CMeltdownSerial
 
     int GetAnalogValue(int pin, int currVal)
     {
-        int val = analogRead(pin);
-        if (HasChanged(currVal, val))
+        if (pin == -1)
         {
-            return val;
+            return GetAnalogValue(currVal);
         }
+        else
+        {
+            int val = analogRead(pin);
+            if (HasChanged(currVal, val))
+            {
+                return val;
+            }
 
-        return currVal;
+            return currVal;
+        }
     }
 
     int GetSerialValue(String inputString, int currVal)
@@ -108,9 +115,14 @@ class CMeltdownSerial
     const String EFFECT = "EFCT";
     const String MODE = "MODE";
     const String BRIGHTNESS = "BRIT";
-    const String HUE = "HUE";
+    const String HUE1 = "HUE1";
+    const String HUE2 = "HUE2";
+    const String HUE3 = "HUE3";
+    const String HUE4 = "HUE4";
+    const String HUE5 = "HUE5";
     const String SPOKE = "SPOK";
     const String WHEEL = "WHEL";
+    const String BOTH = "BOTH";
     const String ANALOG_PATTERN = "ANPT";
     const String ANALOG_EFFECT = "ANEF";
     const String PAUSE = "PAUS";
@@ -143,7 +155,7 @@ class CMeltdownSerial
         if (serial2.available())
         {
             MeltdownLogger.Debug(serial1, "Sending command: ", serialCommand);   
-            for (int i = 0; i < serialCommand.length(); i++)
+            for (uint i = 0; i < serialCommand.length(); i++)
             {
                 serial2.write(serialCommand[i]);   // Push each char 1 by 1 on each loop pass.
             }
