@@ -2,6 +2,8 @@
 #include <OctoWS2811.h>
 #include <FastLED.h>
 #include <MeltdownLED.h>
+#include <MeltdownLogger.h>
+#include <MeltdownSerial.h>
 
 // Boris, short for Explora Borealis, is an interactive light display
 // controlled by several individual user inputs.
@@ -29,13 +31,8 @@
 
 CRGB leds[NUM_LEDS];
 
-CRGB *ledWheelSets[NUM_PENTS][NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT];
-//CRGB *ledSpokeSets[NUM_PENTS][NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT];
-
-// Global LED values.
-bool gActiveSpokes = false;
-bool gSpokesOnly = false;
-bool gWheelsOnly = true;
+CRGB ledWheelSets[NUM_PENTS][NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT];
+//CRGB ledSpokeSets[NUM_PENTS][NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT];
 
 void setup()
 {
@@ -44,6 +41,8 @@ void setup()
     Serial1.begin(9600);
 
     Serial.println("Serial port opened.");
+
+    MeltdownLogger.InitSerial(DEBUG);
     
     delay(3000); // 3 second delay for recovery
     LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_PENT);
@@ -65,7 +64,7 @@ void setupLedArrays()
                 #if DEBUG
                     Serial.print("ledWheelSets["); Serial.print((j * NUM_LEDS_PER_WHEEL) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
                 #endif
-                ledWheelSets[i][(j * NUM_LEDS_PER_WHEEL) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
+                ledWheelSets[i][(j * NUM_LEDS_PER_WHEEL) + k] = leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
             }
 
             for (int k = 0; k < NUM_LEDS_PER_SPOKE; k++)
@@ -73,7 +72,7 @@ void setupLedArrays()
                 #if DEBUG
                     Serial.print("ledSpokeSets["); Serial.print((j * NUM_LEDS_PER_SPOKE) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
                 #endif
-                //ledSpokeSets[i][(j * NUM_LEDS_PER_SPOKE) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
+                //ledSpokeSets[i][(j * NUM_LEDS_PER_SPOKE) + k] = leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
             }
         }
     }
@@ -87,35 +86,41 @@ void loop()
 
     if (!MeltdownLED.GetPause())
     {
-        if (!gSpokesOnly)
+        // Wheel pattern.
+        for (uint8_t i = 0; i < NUM_PENTS; i++)
         {
-            // Wheel pattern.
-            for (uint8_t i = 0; i < NUM_PENTS; i++)
-            {
-                // Call the current pattern function once, updating the 'leds' array.
-                MeltdownLED.ExecutePattern(ledWheelSets[i], NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
-            }
+            // Call the current pattern function once, updating the 'leds' array.
+            MeltdownLED.ExecutePattern(ledWheelSets[i], NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
         }
-        else
-        {
-            //setColor(ledWheelSets, NUM_LEDS_PER_WHEEL, CRGB::Black);
-        }
+        // if (!gSpokesOnly)
+        // {
+        //     // Wheel pattern.
+        //     for (uint8_t i = 0; i < NUM_PENTS; i++)
+        //     {
+        //         // Call the current pattern function once, updating the 'leds' array.
+        //         MeltdownLED.ExecutePattern(ledWheelSets[i], NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
+        //     }
+        // }
+        // else
+        // {
+        //     //setColor(ledWheelSets, NUM_LEDS_PER_WHEEL, CRGB::Black);
+        // }
 
-        if (!gWheelsOnly)
-        {
-            // Spoke pattern.
-            for (uint8_t i = 0; i < NUM_PENTS; i++)
-            {
-                // Call the current pattern function once, updating the 'leds' array.
-                //MeltdownLED.ExecutePattern(ledSpokeSets[i], NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT);
-            }
-        }
-        else
-        {
-            //setColor(ledSpokeSets, NUM_LEDS_PER_SPOKE, CRGB::Black);
-        }
+        // if (!gWheelsOnly)
+        // {
+        //     // Spoke pattern.
+        //     for (uint8_t i = 0; i < NUM_PENTS; i++)
+        //     {
+        //         // Call the current pattern function once, updating the 'leds' array.
+        //         //MeltdownLED.ExecutePattern(ledSpokeSets[i], NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT);
+        //     }
+        // }
+        // else
+        // {
+        //     //setColor(ledSpokeSets, NUM_LEDS_PER_SPOKE, CRGB::Black);
+        // }
 
-        //if (gInverse) invert();
+        // //if (gInverse) invert();
         
         // send the 'leds' array out to the actual LED strip
         LEDS.show();
@@ -123,9 +128,6 @@ void loop()
 
     // insert a delay to keep the framerate modest
     LEDS.delay(1000 / MeltdownLED.GetFps());
- 
-    EVERY_N_MILLISECONDS( 1 ) { MeltdownLED.IncrementHue(2); } // slowly cycle the "base color" through the rainbow
-    EVERY_N_SECONDS( 20 ) { nextPattern(); } // change patterns periodically
 
     //gutCheck();
 }
@@ -160,50 +162,55 @@ void nextPattern()
 {
     // Set to black.
     MeltdownLED.SetAllColor(leds, NUM_LEDS, CRGB::Black);
-
     MeltdownLED.NextPattern();
+
+    MeltdownLogger.Debug(Serial, "Next Pattern...");  
+}
+
+void nextEffect()
+{
+    MeltdownLED.NextEffect();
+
+    MeltdownLogger.Debug(Serial, "Next Effect...");  
+}
+
+void nextMode()
+{
+    int modeNumber = MeltdownLED.NextMode();
+
+    MeltdownLogger.Debug(Serial, "Next Mode: ", modeNumber);
 }
 
 #pragma region SET MODIFIERS
 
 void checkModifiers()
 {
-    //setBrightness();
 }
 
-void setSpokes(bool isActive)
+void setBoth()
 {
-    gActiveSpokes = isActive;
+    // gSpokesOnly = false;
+    // gWheelsOnly = false;
 
-    if (!isActive)
-    {
-        gSpokesOnly = false;
-    }
-
-    #if DEBUG
-        Serial.print("Setting spokes: ");
-        Serial.println(gActiveSpokes);
-    #endif
+    // MeltdownLogger.Debug(Serial, "Setting both...");   
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, false);
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, false);
 }
 
-void setSpokesOnly(bool isActive)
+void setSpokesOnly()
 {
-    gSpokesOnly = isActive;
+    // gSpokesOnly = !gSpokesOnly;
 
-    #if DEBUG
-        Serial.print("Setting spokes only: ");
-        Serial.println(gSpokesOnly);
-    #endif
+    // MeltdownLogger.Debug(Serial, "Setting spokes only: ", gSpokesOnly);   
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, gSpokesOnly);
 }
 
-void setWheelsOnly(bool isActive)
+void setWheelsOnly()
 {
-    gWheelsOnly = isActive;
+    // gWheelsOnly = !gWheelsOnly;
 
-    #if DEBUG
-        Serial.print("Setting wheels only: ");
-        Serial.println(gWheelsOnly);
-    #endif
+    // MeltdownLogger.Debug(Serial, "Setting wheels only: ", gWheelsOnly);   
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, gWheelsOnly);
 }
 
 #pragma endregion SET MODIFIERS
@@ -212,131 +219,94 @@ void setWheelsOnly(bool isActive)
 
 void tryExecuteCommand()
 {
-    if (MeltdownLED.GetInputStringComplete())
+    if (MeltdownSerial.GetInputStringComplete())
     {
-        MeltdownLED.SetInputStringComplete(false);
+        MeltdownSerial.SetInputStringComplete(false);
 
-        String command = MeltdownLED.GetCommand();
+        String command = MeltdownSerial.GetCommand();
         if (!command.equals(""))
         {
-            if (command.equals("BRIT"))
-                //MeltdownLED.SetBrightness();
-            if (command.equals("SPED"))
+            if (command.equals(MeltdownSerial.BRIGHTNESS))
             {
-                MeltdownLED.SetFps();
+                MeltdownLED.SetBrightness(-1);
             }
-            if (command.equals("HUE1"))
+            if (command.equals(MeltdownSerial.HUE1))
             {
-                MeltdownLED.ToggleHue(1);
-                #if DEBUG
-                Serial.print("Setting value: ");
-                Serial.println(MeltdownLED.GetHue());
-                #endif
+                bool hueValue = MeltdownLED.ToggleHue(1);
+                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);   
             }
-            if (command.equals("HUE2"))
+            if (command.equals(MeltdownSerial.HUE2))
             {
-                MeltdownLED.ToggleHue(2);
-                #if DEBUG
-                Serial.print("Setting value: ");
-                Serial.println(MeltdownLED.GetHue());
-                #endif
+                bool hueValue = MeltdownLED.ToggleHue(2);
+                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
             }
-            if (command.equals("HUE3"))
+            if (command.equals(MeltdownSerial.HUE3))
             {
-                MeltdownLED.ToggleHue(3);
-                #if DEBUG
-                Serial.print("Setting value: ");
-                Serial.println(MeltdownLED.GetHue());
-                #endif
+                bool hueValue = MeltdownLED.ToggleHue(3);
+                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
             }
-            if (command.equals("HUE4"))
+            if (command.equals(MeltdownSerial.HUE4))
             {
-                MeltdownLED.ToggleHue(4);
-                #if DEBUG
-                Serial.print("Setting value: ");
-                Serial.println(MeltdownLED.GetHue());
-                #endif
+                bool hueValue = MeltdownLED.ToggleHue(4);
+                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
             }
-            if (command.equals("HUE5"))
+            if (command.equals(MeltdownSerial.HUE5))
             {
-                MeltdownLED.ToggleHue(5);
-                #if DEBUG
-                Serial.print("Setting value: ");
-                Serial.println(MeltdownLED.GetHue());
-                #endif
+                bool hueValue = MeltdownLED.ToggleHue(5);
+                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
             }
-            if (command.equals("PAUS"))
+            if (command.equals(MeltdownSerial.PAUSE))
             {
                 MeltdownLED.SetPause();
             }
-            if (command.equals("FADE"))
-            {
-                MeltdownLED.SetFade(-1);
-                #if DEBUG
-                Serial.print("Setting value: ");
-                Serial.println(MeltdownLED.GetFade());
-                #endif
-            }
-            if (command.equals("POSN"))
-            {
-                MeltdownLED.SetPosition(-1);
-                #if DEBUG
-                Serial.print("Setting value: ");
-                Serial.println(MeltdownLED.GetPosition());
-                #endif
-            }
-            if (command.equals("PTN1"))
+            if (command.equals(MeltdownSerial.PATTERN))
             {
                 nextPattern();
             }
-            if (command.equals("PTN2"))
-            {}
-            if (command.equals("PTN3"))
-            {}
-            if (command.equals("PTN4"))
-            {}
-            if (command.equals("PTN5"))
-            {}
-            if (command.equals("INVR"))
+            if (command.equals(MeltdownSerial.SPOKE))
             {
-                MeltdownLED.SetInverse();
+                // setSpokes(MeltdownLED.GetBoolValue());
             }
-            if (command.equals("SPOK"))
+            if (command.equals(MeltdownSerial.WHEEL))
             {
-                setSpokes(MeltdownLED.GetBoolValue());
+                // setSpokesOnly(MeltdownLED.GetBoolValue());
             }
-            if (command.equals("SPON"))
+            if (command.equals(MeltdownSerial.BOTH))
             {
-                setSpokesOnly(MeltdownLED.GetBoolValue());
+                // setWheelsOnly(MeltdownLED.GetBoolValue());
             }
-            if (command.equals("WHON"))
+            if (command.equals(MeltdownSerial.ANALOG_EFFECT))
             {
-                setWheelsOnly(MeltdownLED.GetBoolValue());
+                MeltdownLED.NextEffect();
+                MeltdownLogger.Debug(Serial, "Next Effect...");  
+            }
+            if (command.equals(MeltdownSerial.ANALOG_PATTERN))
+            {
+                int modeNumber = MeltdownLED.NextMode();
+                MeltdownLogger.Debug(Serial, "Next Mode: ", modeNumber);
             }
         }
 
-        MeltdownLED.ClearInputString();
+        MeltdownSerial.ClearInputString();
     }
 }
 
 void serialEvent()
 {
-    while (Serial1.available() && !MeltdownLED.GetInputStringComplete())
+    while (Serial1.available() && !MeltdownSerial.GetInputStringComplete())
     {
         // get the new byte:
         char inChar = (char)Serial1.read();
         // add it to the inputString:
-        MeltdownLED.AddCharToInputString(inChar);
+        MeltdownSerial.AddCharToInputString(inChar);
         // if the incoming character is a newline, set a flag
         // so the main loop can do something about it:
         if (inChar == '\n')
         {
-            Serial.println("Received input string: " + MeltdownLED.GetInputString());
-            MeltdownLED.SetInputStringComplete(true);
+            Serial.println("Received input string: " + MeltdownSerial.GetInputString());
+            MeltdownSerial.SetInputStringComplete(true);
         }
     }
 }
 
 #pragma endregion COMMANDS
-
-

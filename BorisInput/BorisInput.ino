@@ -54,11 +54,6 @@ CRGB ringLeds1[NUM_LEDS_PER_LARGE_RING];
 CRGB ringLeds2[NUM_LEDS_PER_LARGE_RING];
 // CRGB ringLeds2[NUM_LEDS_PER_MED_RING];
 
-// Global LED values.
-bool gActiveSpokes = false;
-bool gSpokesOnly = false;
-bool gWheelsOnly = false;
-
 // Buttons.
 struct Button
 {
@@ -189,7 +184,7 @@ void setupLedArrays()
 void nextPattern()
 {
     // Set to black.
-    setColor(ringLeds1, NUM_LEDS_PER_LARGE_RING, CRGB::Black);  
+    MeltdownLED.SetAllColor(ringLeds1, NUM_LEDS_PER_LARGE_RING, CRGB::Black);  
     MeltdownLED.NextPattern();
 
     MeltdownLogger.Debug(Serial, "Next Pattern...");  
@@ -245,33 +240,33 @@ void toggleHue(int index)
     bool hueValue = MeltdownLED.ToggleHue(index);
     
     MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);   
-    MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.HUE + index, hueValue);
+    MeltdownSerial.SendCommand(Serial, Serial2, "HUE" + index, hueValue);
 }
 
 void setBoth()
 {
-    gSpokesOnly = false;
-    gWheelsOnly = false;
+    // gSpokesOnly = false;
+    // gWheelsOnly = false;
 
-    MeltdownLogger.Debug(Serial, "Setting both...");   
-    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, false);
-    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, false);
+    // MeltdownLogger.Debug(Serial, "Setting both...");   
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, false);
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, false);
 }
 
 void setSpokesOnly()
 {
-    gSpokesOnly = !gSpokesOnly;
+    // gSpokesOnly = !gSpokesOnly;
 
-    MeltdownLogger.Debug(Serial, "Setting spokes only: ", gSpokesOnly);   
-    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, gSpokesOnly);
+    // MeltdownLogger.Debug(Serial, "Setting spokes only: ", gSpokesOnly);   
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, gSpokesOnly);
 }
 
 void setWheelsOnly()
 {
-    gWheelsOnly = !gWheelsOnly;
+    // gWheelsOnly = !gWheelsOnly;
 
-    MeltdownLogger.Debug(Serial, "Setting wheels only: ", gWheelsOnly);   
-    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, gWheelsOnly);
+    // MeltdownLogger.Debug(Serial, "Setting wheels only: ", gWheelsOnly);   
+    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, gWheelsOnly);
 }
 
 void setAnalogPattern()
