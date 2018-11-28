@@ -1,17 +1,15 @@
 #include <Arduino.h>
 #include <FastLED.h>
+#include <MeltdownSerial.h>
+
+#ifndef MELTDOWN_LED
+#define MELTDOWN_LED
 
 #define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 
 class CMeltdownLED
 {
     public: CMeltdownLED();
-
-    int m_analogTolerance;
-
-    // Serial input commands.
-    String m_inputString;
-    boolean m_inputStringComplete; // whether the String is complete
 
     // Global LED values.
     int gCurrentPatternNumber = 0;
@@ -55,7 +53,7 @@ class CMeltdownLED
 
     int SetAnalogPattern(int pin)
     {
-        gAnalogPattern = GetAnalogValue(pin, gAnalogPattern);
+        gAnalogPattern = MeltdownSerial.GetAnalogValue(pin, gAnalogPattern);
         return gAnalogPattern;
     }
     int GetAnalogPattern() { return gAnalogPattern; }
@@ -64,7 +62,7 @@ class CMeltdownLED
 
     int SetAnalogEffect(int pin)
     {
-        gAnalogEffect = GetAnalogValue(pin, gAnalogEffect);
+        gAnalogEffect = MeltdownSerial.GetAnalogValue(pin, gAnalogEffect);
         return gAnalogEffect;
     }
     int GetAnalogEffect() { return gAnalogEffect; }
@@ -75,7 +73,7 @@ class CMeltdownLED
 
     int SetBrightness(int pin)
     {
-        gBrightness = GetAnalogValue(pin, gBrightness);
+        gBrightness = MeltdownSerial.GetAnalogValue(pin, gBrightness);
         LEDS.setBrightness(gBrightness);
 
         return gBrightness;
@@ -135,7 +133,7 @@ class CMeltdownLED
         gPause = !gPause;
         return gPause;
     }
-    void SetPause() { gPause = GetBoolValue(); }
+    void SetPause() { gPause = MeltdownSerial.GetBoolValue(); }
 
     bool GetPause() { return gPause; }
 
@@ -367,131 +365,8 @@ class CMeltdownLED
     }
 
     #pragma endregion PATTERNS
-
-    #pragma region INPUTS
-
-    int GetAnalogValue(int currVal)
-    {
-        int val = currVal;
-        
-        if (!m_inputString.equals(""))
-        {
-            val = GetSerialValue(m_inputString, currVal);
-        }
-
-        return val;
-    }
-
-    int GetAnalogValue(int pin, int currVal)
-    {
-        int val = analogRead(pin);
-        if (HasChanged(currVal, val))
-        {
-            return val;
-        }
-
-        return currVal;
-    }
-
-    int GetSerialValue(String inputString, int currVal)
-    {
-        if (inputString[0] == '#' && inputString.length() >= 10)
-        {
-            String valString = inputString.substring(5, 9);
-            int val = valString.toInt();
-
-            // A value of 0 indicates an error but is acceptable if the intended value is actually 0.
-            if (val != 0 || valString.equals("0000"))
-            {
-                return val;
-            }
-        }
-
-        return currVal;
-    }
-
-    // Because an analog read can waiver between values, we need to determine if an analog value has changed enough
-    // for us to do anything about.
-    bool HasChanged(int oldVal, int newVal)
-    {
-        // Otherwise, check that the value has surpassed the tolerance threshold.
-        return newVal <= (oldVal - m_analogTolerance) || newVal >= (oldVal + m_analogTolerance);
-    }
-
-    String GetInputString() { return m_inputString; }
-
-    void ClearInputString() { m_inputString = ""; }
-
-    void AddCharToInputString(char inChar) { m_inputString += inChar; }
-
-    bool GetInputStringComplete() { return m_inputStringComplete; }
-
-    void SetInputStringComplete(bool value) { m_inputStringComplete = value; }
-
-    String GetCommand()
-    {
-        if (m_inputString[0] == '#' && m_inputString.length() >= 6)
-        {
-            return m_inputString.substring(1, 5);
-        }
-        return "";
-    }
-
-    int GetValue()
-    {    
-        int val = 0;
-        if (m_inputString[0] == '#' && m_inputString.length() >= 10)
-        {
-            String valString = m_inputString.substring(5, 9);
-            val = valString.toInt();
-        }
-        return val;
-    }
-
-    bool GetBoolValue()
-    {
-        int val = GetValue();
-        return val != 0 ? true : false;
-    }
-
-    #pragma endregion INPUTS
-
-    #pragma region COMMANDS
-
-    String PrepareBoolCommand(String command, bool value) { return PrepareCommand(command, value ? 1 : 0); }
-
-    String PrepareCommand(String command, int value)
-    {
-        if (value < 0) value = 0;
-        if (value > 9999) value = 9999;
-
-        String valueString = "";
-        if (value < 1000) valueString += "0";
-        if (value < 100) valueString += "0";
-        if (value < 10) valueString += "0";
-        valueString += value;
-
-        return "#" + command + valueString + "\n";
-    }
-
-    #pragma endregion COMMANDS
 };
 
 extern CMeltdownLED MeltdownLED;
 
-
-class CMeltdownLogger
-{
-    public: CMeltdownLogger();
-
-    Serial_ m_serial;
-
-    void InitSerial(Serial_ serial)
-    {
-        m_serial = serial;
-    }
-
-    void Print(string )
-};
-
-extern CMeltdownLogger MeltdownLogger;
+#endif
