@@ -39,6 +39,7 @@
 #define WHEELS_ONLY_PIN BUTTON_PIN_8
 #define ANALOG_PATTERN_PIN ANALOG_PIN_1
 #define ANALOG_EFFECT_PIN ANALOG_PIN_2
+#define PARTIAL_RING_PIN ANALOG_PIN_2
 
 #define NUM_MED_RINGS 0
 #define NUM_LARGE_RINGS 2
@@ -50,9 +51,11 @@
 #define NUM_RING_LEDS (NUM_LARGE_RING_LEDS + NUM_MED_RING_LEDS)
 #define NUM_LEDS (NUM_RING_LEDS)
 
-CRGB ringLeds1[NUM_LEDS_PER_LARGE_RING];
-CRGB ringLeds2[NUM_LEDS_PER_LARGE_RING];
-// CRGB ringLeds2[NUM_LEDS_PER_MED_RING];
+CRGB patternRingLeds[NUM_LEDS_PER_LARGE_RING];
+CRGB analogRingLeds[NUM_LEDS_PER_LARGE_RING];
+// CRGB analogRingLeds[NUM_LEDS_PER_MED_RING];
+
+int gRingLedCount = 0; // determines the number of lit LEDs for the parially lit ring
 
 // Buttons.
 struct Button
@@ -79,7 +82,7 @@ Button hue4Button = { HUE4_PIN };
 Button pauseButton = { PAUSE_PIN };
 
 // Ring options.
-enum RingPosition { Top, Bottom, Full, Empty };
+enum RingPosition { Top, Bottom, Full, Empty, Partial };
 enum RingSize { Large, Medium };
 
 void setup()
@@ -94,9 +97,9 @@ void setup()
     
     delay(3000); // 3 second delay for recovery
     //FastLED
-    FastLED.addLeds<WS2812, RING_PIN_1, GRB>(ringLeds1, NUM_LEDS_PER_LARGE_RING);  
-    // FastLED.addLeds<WS2812, RING_PIN_2, GRB>(ringLeds2, NUM_LEDS_PER_MED_RING);  
-    FastLED.addLeds<WS2812, RING_PIN_2, GRB>(ringLeds2, NUM_LEDS_PER_LARGE_RING);  
+    FastLED.addLeds<WS2812, RING_PIN_1, GRB>(patternRingLeds, NUM_LEDS_PER_LARGE_RING);  
+    // FastLED.addLeds<WS2812, RING_PIN_2, GRB>(analogRingLeds, NUM_LEDS_PER_MED_RING);  
+    FastLED.addLeds<WS2812, RING_PIN_2, GRB>(analogRingLeds, NUM_LEDS_PER_LARGE_RING);  
 
     // set master brightness control
     LEDS.setBrightness(MeltdownLED.GetBrightness());
@@ -140,27 +143,22 @@ void setupButtons()
 void loop()
 {
     checkButtonStates();
-
     checkModifiers();
 
     if (!MeltdownLED.GetPause())
     {
-        // Wheel pattern.
-        // Call the current pattern function once, updating the 'leds' array
-        MeltdownLED.ExecutePattern(ringLeds1, NUM_LEDS_PER_LARGE_RING);
-        MeltdownLED.ExecutePattern(ringLeds2, NUM_LEDS_PER_LARGE_RING);
-        // MeltdownLED.ExecutePattern(ringLeds2, NUM_LEDS_PER_MED_RING);
-        
-        MeltdownLED.ExecuteEffect(ringLeds1, NUM_LEDS_PER_LARGE_RING);
-        MeltdownLED.ExecuteEffect(ringLeds2, NUM_LEDS_PER_LARGE_RING);
-        // MeltdownLED.ExecuteEffect(ringLeds2, NUM_LEDS_PER_MED_RING);
-
-        // send the 'leds' array out to the actual LED strip
-        LEDS.show();
+        MeltdownLED.ExecutePattern(patternRingLeds, NUM_LEDS_PER_LARGE_RING);
+        MeltdownLED.ExecuteEffect(patternRingLeds, NUM_LEDS_PER_LARGE_RING);
     }
 
-    // insert a delay to keep the framerate modest
+    MeltdownLED.ExecutePattern(analogRingLeds, NUM_LEDS_PER_LARGE_RING);
+    MeltdownLED.ExecuteEffect(analogRingLeds, NUM_LEDS_PER_LARGE_RING);
+    // MeltdownLED.ExecutePattern(analogRingLeds, NUM_LEDS_PER_MED_RING);
+    // MeltdownLED.ExecuteEffect(analogRingLeds, NUM_LEDS_PER_MED_RING);
+
     LEDS.delay(1000 / MeltdownLED.GetFps());
+    
+    LEDS.show();
 }
 
 void setupLedArrays()
@@ -184,7 +182,7 @@ void setupLedArrays()
 void nextPattern()
 {
     // Set to black.
-    MeltdownLED.SetAllColor(ringLeds1, NUM_LEDS_PER_LARGE_RING, CRGB::Black);  
+    MeltdownLED.SetAllColor(patternRingLeds, NUM_LEDS_PER_LARGE_RING, CRGB::Black);  
     MeltdownLED.NextPattern();
 
     MeltdownLogger.Debug(Serial, "Next Pattern...");  
@@ -338,8 +336,23 @@ bool canColorRingLed(int index, int numLeds, RingPosition position)
         return index > (numLeds / 2);
     if (position == Bottom) 
         return index <= (numLeds / 2);
+    if (position == Partial)
+        return index <= getRingLedCount
 
     return false;
+}
+
+int getRingLedCount(int numLeds)
+{
+    int currVal = gRingLedCount;
+    int newVal = MeltdownSerial.GetAnalogValue(PARTIAL_RING_PIN, currVal);
+
+    if (MeltdownSerial.HasChanged(currVal, newVal))
+    {
+        gRingLedCount = 0; // TODO MAP THIS
+    }
+
+    return gRingLedCount;
 }
 
 #pragma endregion PATTERNS
