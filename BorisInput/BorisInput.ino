@@ -89,7 +89,7 @@ void setup()
 {
     // initialize serial communication at 9600 bits per second:
     Serial.begin(9600);
-    Serial2.begin(9600);
+    Serial1.begin(9600);
 
     Serial.println("Serial port opened.");
 
@@ -186,7 +186,7 @@ void nextPattern()
     MeltdownLED.NextPattern();
 
     MeltdownLogger.Debug(Serial, "Next Pattern...");  
-    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.PATTERN, true);
+    MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.PATTERN, true);
 }
 
 void nextEffect()
@@ -194,7 +194,7 @@ void nextEffect()
     MeltdownLED.NextEffect();
 
     MeltdownLogger.Debug(Serial, "Next Effect...");  
-    MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.EFFECT, true);
+    MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.EFFECT, true);
 }
 
 void nextMode()
@@ -202,7 +202,7 @@ void nextMode()
     int modeNumber = MeltdownLED.NextMode();
 
     MeltdownLogger.Debug(Serial, "Next Mode: ", modeNumber);
-    MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.MODE, true);
+    MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.MODE, true);
 }
 
 #pragma region SET MODIFIERS
@@ -224,7 +224,7 @@ void setBrightness()
     if (MeltdownSerial.HasChanged(currVal, brightVal))
     {
         MeltdownLogger.Debug(Serial, "Setting Brightness: ", brightVal);   
-        MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.BRIGHTNESS, brightVal);
+        MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.BRIGHTNESS, brightVal);
     }
 }
 
@@ -238,7 +238,7 @@ void toggleHue(int index)
     bool hueValue = MeltdownLED.ToggleHue(index);
     
     MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);   
-    MeltdownSerial.SendCommand(Serial, Serial2, "HUE" + index, hueValue);
+    MeltdownSerial.SendCommand(Serial, Serial1, "HUE" + index, hueValue);
 }
 
 void setBoth()
@@ -247,8 +247,8 @@ void setBoth()
     // gWheelsOnly = false;
 
     // MeltdownLogger.Debug(Serial, "Setting both...");   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, false);
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, false);
+    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.SPOKE, false);
+    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.WHEEL, false);
 }
 
 void setSpokesOnly()
@@ -256,7 +256,7 @@ void setSpokesOnly()
     // gSpokesOnly = !gSpokesOnly;
 
     // MeltdownLogger.Debug(Serial, "Setting spokes only: ", gSpokesOnly);   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, gSpokesOnly);
+    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.SPOKE, gSpokesOnly);
 }
 
 void setWheelsOnly()
@@ -264,7 +264,7 @@ void setWheelsOnly()
     // gWheelsOnly = !gWheelsOnly;
 
     // MeltdownLogger.Debug(Serial, "Setting wheels only: ", gWheelsOnly);   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, gWheelsOnly);
+    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.WHEEL, gWheelsOnly);
 }
 
 void setAnalogPattern()
@@ -275,7 +275,7 @@ void setAnalogPattern()
     if (MeltdownSerial.HasChanged(currVal, patternVal))
     {
         MeltdownLogger.Debug(Serial, "Setting Analog Pattern: ", patternVal);   
-        MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.ANALOG_PATTERN, patternVal);
+        MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ANALOG_PATTERN, patternVal);
     }
 }
 
@@ -287,7 +287,7 @@ void setAnalogEffect()
     if (MeltdownSerial.HasChanged(currVal, modeVal))
     {
         MeltdownLogger.Debug(Serial, "Setting Analog Effect: ", modeVal);   
-        MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.ANALOG_EFFECT, modeVal);
+        MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ANALOG_EFFECT, modeVal);
     }
 }
 
@@ -296,7 +296,7 @@ void togglePause()
     bool pauseVal = MeltdownLED.TogglePause();
 
     MeltdownLogger.Debug(Serial, "Setting Pause: ", pauseVal);   
-    MeltdownSerial.SendCommand(Serial, Serial2, MeltdownSerial.PAUSE, pauseVal);
+    MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.PAUSE, pauseVal);
 }
 
 #pragma endregion SET MODIFIERS
@@ -337,7 +337,7 @@ bool canColorRingLed(int index, int numLeds, RingPosition position)
     if (position == Bottom) 
         return index <= (numLeds / 2);
     if (position == Partial)
-        return index <= getRingLedCount
+        return index <= getRingLedCount(numLeds);
 
     return false;
 }
