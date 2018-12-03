@@ -151,14 +151,18 @@ class CMeltdownSerial
     void SendCommand(Stream &serial1, Stream &serial2, String command, int value)
     {
         String serialCommand = PrepareCommand(command, value);
-        
-        if (serial2.available())
+ 
+        if (serial2.availableForWrite())
         {
             MeltdownLogger.Debug(serial1, "Sending command: ", serialCommand);   
             for (uint8_t i = 0; i < serialCommand.length(); i++)
             {
                 serial2.write(serialCommand[i]);   // Push each char 1 by 1 on each loop pass.
             }
+        }
+        else
+        {
+            MeltdownLogger.Debug(serial1, "Failed to send command, Serial unavailable.");  
         }
     }
 
