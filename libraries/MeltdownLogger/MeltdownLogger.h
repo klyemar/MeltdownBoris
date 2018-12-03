@@ -21,6 +21,14 @@ class CMeltdownLogger
         serial.println(msg);
     }
 
+    void Debug(Stream &serial, String msg, String value)
+    {
+        if (!m_isDebug) return;
+
+        serial.print(msg);
+        serial.println(value);
+    }
+
     void Debug(Stream &serial, String msg, int value)
     {
         if (!m_isDebug) return;
