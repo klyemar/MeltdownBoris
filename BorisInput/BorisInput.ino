@@ -13,6 +13,9 @@
 
 #define RING_PIN_1 8
 #define RING_PIN_2 9
+#define RING_PIN_3 10
+#define RING_PIN_4 11
+#define RING_PIN_5 12
 
 #define BUTTON_PIN_1 27 // 2
 #define BUTTON_PIN_2 28 // 3
@@ -24,6 +27,7 @@
 #define BUTTON_PIN_8 34 // 11
 #define BUTTON_PIN_9 35 // 12
 #define BUTTON_PIN_10 36 // 13
+#define BUTTON_PIN_11 37
 #define ANALOG_PIN_1 A0
 #define ANALOG_PIN_2 A1
 
@@ -35,46 +39,47 @@
 #define HUE3_PIN BUTTON_PIN_9
 #define HUE4_PIN BUTTON_PIN_10
 #define EFFECT_PIN BUTTON_PIN_6
-#define SPOKES_ONLY_PIN BUTTON_PIN_7
-#define WHEELS_ONLY_PIN BUTTON_PIN_8
+#define BOTTOM_PIN BUTTON_PIN_7
+#define TOP_PIN BUTTON_PIN_8
 #define ANALOG_PATTERN_PIN ANALOG_PIN_1
 #define ANALOG_EFFECT_PIN ANALOG_PIN_2
 #define PARTIAL_RING_PIN ANALOG_PIN_2
 
-#define NUM_MED_RINGS 0
-#define NUM_LARGE_RINGS 2
-
 #define NUM_LEDS_PER_MED_RING 16
 #define NUM_LEDS_PER_LARGE_RING 24
-#define NUM_MED_RING_LEDS (NUM_LEDS_PER_MED_RING + NUM_MED_RINGS)
-#define NUM_LARGE_RING_LEDS (NUM_LEDS_PER_LARGE_RING + NUM_LARGE_RINGS)
-#define NUM_RING_LEDS (NUM_LARGE_RING_LEDS + NUM_MED_RING_LEDS)
-#define NUM_LEDS (NUM_RING_LEDS)
 
-CRGB patternRingLeds[NUM_LEDS_PER_LARGE_RING];
-CRGB analogRingLeds[NUM_LEDS_PER_LARGE_RING];
-// CRGB analogRingLeds[NUM_LEDS_PER_MED_RING];
+CRGB ringLeds1[NUM_LEDS_PER_LARGE_RING];
+CRGB ringLeds2[NUM_LEDS_PER_LARGE_RING];
+CRGB ringLeds3[NUM_LEDS_PER_LARGE_RING];
+CRGB ringLeds4[NUM_LEDS_PER_MED_RING];
+CRGB ringLeds5[NUM_LEDS_PER_MED_RING];
+
+CRGB *patternRing[NUM_LEDS_PER_LARGE_RING];
+CRGB *effectValRing[NUM_LEDS_PER_LARGE_RING];
+CRGB *positionRing[NUM_LEDS_PER_LARGE_RING];
+CRGB *modeRing[NUM_LEDS_PER_MED_RING];
+CRGB *effectRing[NUM_LEDS_PER_MED_RING];
 
 int gRingLedCount = 0; // determines the number of lit LEDs for the parially lit ring
+int gRingHue = 0;
 
-// Buttons.
 struct Button
 {
     int pin;
     int state;
-    bool canChangeState;
+    int previousState;
     bool isToggle;
     void (*callback)();
     
-    Button(int pin) : pin (pin), state {0}, canChangeState {false}, isToggle {true}
+    Button(int pin) : pin (pin), state {HIGH}, previousState {HIGH}, isToggle {false}
     {}
 };
 
 Button patternButton = { PATTERN_PIN };
 Button effectButton = { EFFECT_PIN };
 Button modeButton = { MODE_PIN };
-Button spokesOnlyButton = { SPOKES_ONLY_PIN };
-Button wheelsOnlyButton = { WHEELS_ONLY_PIN };
+Button topButton = { TOP_PIN };
+Button bottomButton = { BOTTOM_PIN };
 Button hue1Button = { HUE1_PIN };
 Button hue2Button = { HUE2_PIN };
 Button hue3Button = { HUE3_PIN };
@@ -83,7 +88,6 @@ Button pauseButton = { PAUSE_PIN };
 
 // Ring options.
 enum RingPosition { Top, Bottom, Full, Empty, Partial };
-enum RingSize { Large, Medium };
 
 void setup()
 {
@@ -95,18 +99,19 @@ void setup()
 
     MeltdownLogger.InitSerial(DEBUG);
     
-    delay(3000); // 3 second delay for recovery
-    //FastLED
-    FastLED.addLeds<WS2812, RING_PIN_1, GRB>(patternRingLeds, NUM_LEDS_PER_LARGE_RING);  
-    // FastLED.addLeds<WS2812, RING_PIN_2, GRB>(analogRingLeds, NUM_LEDS_PER_MED_RING);  
-    FastLED.addLeds<WS2812, RING_PIN_2, GRB>(analogRingLeds, NUM_LEDS_PER_LARGE_RING);  
+    delay(3000);
+    
+    FastLED.addLeds<WS2812, RING_PIN_1, GRB>(ringLeds1, NUM_LEDS_PER_LARGE_RING);  
+    FastLED.addLeds<WS2812, RING_PIN_2, GRB>(ringLeds2, NUM_LEDS_PER_LARGE_RING);  
+    FastLED.addLeds<WS2812, RING_PIN_3, GRB>(ringLeds3, NUM_LEDS_PER_LARGE_RING);  
+    FastLED.addLeds<WS2812, RING_PIN_4, GRB>(ringLeds4, NUM_LEDS_PER_MED_RING);  
+    FastLED.addLeds<WS2812, RING_PIN_5, GRB>(ringLeds5, NUM_LEDS_PER_MED_RING);  
 
-    // set master brightness control
     LEDS.setBrightness(MeltdownLED.GetBrightness());
 
-    // setupLedArrays();
-
     setupButtons();
+
+    setupLedArrays();
 
     pinMode(BUTTON_PIN_1, INPUT_PULLUP);
     pinMode(BUTTON_PIN_2, INPUT_PULLUP);
@@ -118,6 +123,7 @@ void setup()
     pinMode(BUTTON_PIN_8, INPUT_PULLUP);
     pinMode(BUTTON_PIN_9, INPUT_PULLUP);
     pinMode(BUTTON_PIN_10, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_11, INPUT_PULLUP);
     pinMode(ANALOG_PIN_1, INPUT);
     pinMode(ANALOG_PIN_2, INPUT);
 }
@@ -125,19 +131,35 @@ void setup()
 void setupButtons()
 {  
     patternButton.callback = nextPattern;
+    patternButton.isToggle = true;
     effectButton.callback = nextEffect;
+    effectButton.isToggle = true;
     modeButton.callback = nextMode;
-    spokesOnlyButton.callback = setSpokesOnly;
-    wheelsOnlyButton.callback = setWheelsOnly;
+    modeButton.isToggle = true;
+    
+    topButton.callback = setTopPosition;
+    bottomButton.callback = setBottomPosition;
     hue1Button.callback = toggleHue1;
-    hue1Button.isToggle = false;
     hue2Button.callback = toggleHue2;
-    hue2Button.isToggle = false;
     hue3Button.callback = toggleHue3;
-    hue3Button.isToggle = false;
     hue4Button.callback = toggleHue4;
-    hue4Button.isToggle = false;
     pauseButton.callback = togglePause;
+}
+
+void setupLedArrays()
+{
+    for (int i = 0; i < NUM_LEDS_PER_LARGE_RING; i++)
+    {
+        patternRing[i] = &ringLeds1[i];
+        effectValRing[i] = &ringLeds2[i];
+        positionRing[i] = &ringLeds3[i];
+    }
+
+    for (int i = 0; i < NUM_LEDS_PER_MED_RING; i++)
+    {
+        modeRing[i] = &ringLeds4[i];
+        effectRing[i] = &ringLeds5[i];
+    }
 }
 
 void loop()
@@ -147,42 +169,41 @@ void loop()
 
     if (!MeltdownLED.GetPause())
     {
-        MeltdownLED.ExecutePattern(patternRingLeds, NUM_LEDS_PER_LARGE_RING);
-        MeltdownLED.ExecuteEffect(patternRingLeds, NUM_LEDS_PER_LARGE_RING);
+        MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1);
+        MeltdownLED.ExecuteEffect(patternRing, NUM_LEDS_PER_LARGE_RING);
+        
+        MeltdownLED.ExecutePattern(modeRing, NUM_LEDS_PER_MED_RING, 0, 1);
+        MeltdownLED.ExecuteEffect(modeRing, NUM_LEDS_PER_MED_RING);
     }
 
-    MeltdownLED.ExecutePattern(analogRingLeds, NUM_LEDS_PER_LARGE_RING);
-    MeltdownLED.ExecuteEffect(analogRingLeds, NUM_LEDS_PER_LARGE_RING);
-    // MeltdownLED.ExecutePattern(analogRingLeds, NUM_LEDS_PER_MED_RING);
-    // MeltdownLED.ExecuteEffect(analogRingLeds, NUM_LEDS_PER_MED_RING);
+    if (MeltdownLED.GetTop())
+    {
+        setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Top, 64);
+    }
+    else if (MeltdownLED.GetBottom())
+    {
+        setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Bottom, 128);
+    }
+    else
+    {
+        setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Full, 192);
+    }
+
+    setRingColor(effectValRing, NUM_LEDS_PER_LARGE_RING, Partial, 0);
+    MeltdownLED.ExecuteEffect(effectValRing, NUM_LEDS_PER_LARGE_RING);
+
+    setColor(effectRing, NUM_LEDS_PER_MED_RING, CRGB::Black);
+    MeltdownLED.ExecuteEffect(effectRing, NUM_LEDS_PER_MED_RING, 1);
 
     LEDS.delay(1000 / MeltdownLED.GetFps());
     
     LEDS.show();
 }
 
-void setupLedArrays()
-{   
-    // for (int i = 0; i < NUM_LARGE_RINGS; i++)
-    // {
-    //     for (int j = 0; j < NUM_LEDS_PER_LARGE_RING; j++)
-    //     {
-    //         ledLargeRingSets[i] = &leds[(i * NUM_LEDS_PER_LARGE_RING) + j];
-    //     }
-    // }
-    // for (int i = 0; i < NUM_MED_RINGS; i++)
-    // {
-    //     for (int j = 0; j < NUM_LEDS_PER_MED_RING; j++)
-    //     {
-    //         ledMedRingSets[i] = &leds[(i * NUM_LEDS_PER_MED_RING) + j];
-    //     }
-    // }
-}
-
 void nextPattern()
 {
     // Set to black.
-    MeltdownLED.SetAllColor(patternRingLeds, NUM_LEDS_PER_LARGE_RING, CRGB::Black);  
+    MeltdownLED.SetAllColor(patternRing, NUM_LEDS_PER_LARGE_RING, CRGB::Black);  
     MeltdownLED.NextPattern();
 
     MeltdownLogger.Debug(Serial, "Next Pattern...");  
@@ -228,43 +249,33 @@ void setBrightness()
     }
 }
 
-void toggleHue1() { toggleHue(1); }
-void toggleHue2() { toggleHue(2); }
-void toggleHue3() { toggleHue(3); }
-void toggleHue4() { toggleHue(4); }
+void toggleHue1() { toggleHue(1, MeltdownSerial.HUE1); }
+void toggleHue2() { toggleHue(2, MeltdownSerial.HUE2); }
+void toggleHue3() { toggleHue(3, MeltdownSerial.HUE3); }
+void toggleHue4() { toggleHue(4, MeltdownSerial.HUE4); }
 
-void toggleHue(int index)
+void toggleHue(int index, String command)
 {
     bool hueValue = MeltdownLED.ToggleHue(index);
     
-    MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);   
-    MeltdownSerial.SendCommand(Serial, Serial1, "HUE" + index, hueValue);
+    MeltdownLogger.Debug(Serial, "Toggling Hue: ", command);   
+    MeltdownSerial.SendCommand(Serial, Serial1, command, hueValue);
 }
 
-void setBoth()
+void setTopPosition()
 {
-    // gSpokesOnly = false;
-    // gWheelsOnly = false;
+    bool topVal = MeltdownLED.ToggleTop();
 
-    // MeltdownLogger.Debug(Serial, "Setting both...");   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.SPOKE, false);
-    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.WHEEL, false);
+    MeltdownLogger.Debug(Serial, "Setting top position: ", topVal);   
+    MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.TOP, topVal);
 }
 
-void setSpokesOnly()
+void setBottomPosition()
 {
-    // gSpokesOnly = !gSpokesOnly;
+    bool bottomVal = MeltdownLED.ToggleBottom();
 
-    // MeltdownLogger.Debug(Serial, "Setting spokes only: ", gSpokesOnly);   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.SPOKE, gSpokesOnly);
-}
-
-void setWheelsOnly()
-{
-    // gWheelsOnly = !gWheelsOnly;
-
-    // MeltdownLogger.Debug(Serial, "Setting wheels only: ", gWheelsOnly);   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.WHEEL, gWheelsOnly);
+    MeltdownLogger.Debug(Serial, "Setting bottom position: ", bottomVal);   
+    MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.BOTTOM, bottomVal);
 }
 
 void setAnalogPattern()
@@ -303,25 +314,23 @@ void togglePause()
 
 #pragma region PATTERNS
 
-void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
+void setColor(CRGB *ledSets[], int numLeds, CRGB::HTMLColorCode color)
 {
     for (int i = 0; i < numLeds; i++)
     {
-        ledSets[i] = color;
+        *ledSets[i] = color;
     }
 }
 
-void setRingColor(CRGB *ringLeds[], int numLeds, RingPosition position, CRGB::HTMLColorCode color)
+void setRingColor(CRGB *ringLeds[], int numLeds, RingPosition position, int hueOffset)
 {
+    setColor(ringLeds, numLeds, CRGB::Black);
+
     for (int i = 0; i < numLeds; i++)
     {
         if (canColorRingLed(i + 1, numLeds, position))
         {
-            *ringLeds[i] = color;
-        }
-        else
-        {
-            *ringLeds[i] = CRGB::Black;
+            *ringLeds[i] = CHSV(gRingHue + hueOffset, 255, 192);
         }
     }
 }
@@ -349,7 +358,8 @@ int getRingLedCount(int numLeds)
 
     if (MeltdownSerial.HasChanged(currVal, newVal))
     {
-        gRingLedCount = 0; // TODO MAP THIS
+        gRingLedCount = map(newVal, 0, 1023, 0, numLeds + 1);
+        gRingHue = map(newVal, 0, 1023, 0, 255);
     }
 
     return gRingLedCount;
@@ -367,8 +377,8 @@ void checkButtonStates()
         checkButtonState(&effectButton);
         checkButtonState(&modeButton);
         checkButtonState(&pauseButton);
-        checkButtonState(&spokesOnlyButton);
-        checkButtonState(&wheelsOnlyButton);
+        checkButtonState(&topButton);
+        checkButtonState(&bottomButton);
         checkButtonState(&hue1Button);
         checkButtonState(&hue2Button);
         checkButtonState(&hue3Button);
@@ -380,19 +390,22 @@ void checkButtonState(Button *button)
 {
     // Read the state of the button pin.
     button->state = digitalRead(button->pin);
-    // Check if the button is pressed. If it is, the buttonState is HIGH.
-    if (button->state == LOW && button->canChangeState) 
+
+    // Check if the button is depressed. If it is, the buttonState is LOW.
+    if (button->state == LOW && button->previousState == HIGH) 
     {
         button->callback();
-        button->canChangeState = false;
+
+        button->previousState = LOW;
     }
-    else if (button->state == HIGH && !(button->canChangeState))
+    // Check if the button is pressed. If it is, the buttonState is HIGH.
+    else if (button->state == HIGH && button->previousState == LOW)
     {
         if (!button->isToggle)
         {
             button->callback();
         }
-        button->canChangeState = true;
+        button->previousState = HIGH;
     }
 }
 
