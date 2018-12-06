@@ -26,6 +26,7 @@ class CMeltdownLogger
         if (!m_isDebug) return;
 
         serial.print(msg);
+        serial.print(": ");
         serial.println(value);
     }
 
@@ -34,6 +35,7 @@ class CMeltdownLogger
         if (!m_isDebug) return;
         
         serial.print(msg);
+        serial.print(": ");
         serial.println(value);
     }
 
@@ -42,6 +44,7 @@ class CMeltdownLogger
         if (!m_isDebug) return;
         
         serial.print(msg);
+        serial.print(": ");
         serial.println(value);
     }
 
@@ -50,6 +53,7 @@ class CMeltdownLogger
         if (!m_isDebug) return;
         
         serial.print(msg);
+        serial.print(": ");
         serial.println(value);
     }
 };

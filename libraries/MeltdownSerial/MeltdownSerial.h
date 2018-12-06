@@ -120,8 +120,8 @@ class CMeltdownSerial
     const String HUE3 = "HUE3";
     const String HUE4 = "HUE4";
     const String HUE5 = "HUE5";
-    const String SPOKE = "SPOK";
-    const String WHEEL = "WHEL";
+    const String TOP = "TOPP";
+    const String BOTTOM = "BOTP";
     const String BOTH = "BOTH";
     const String ANALOG_PATTERN = "ANPT";
     const String ANALOG_EFFECT = "ANEF";
