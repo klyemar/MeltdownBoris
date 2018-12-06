@@ -18,17 +18,21 @@
 #define NUM_PENTS 1
 #define NUM_STRIPS_PER_PENT 1
 
-#define NUM_LEDS_PER_WHEEL 36 //69
-#define NUM_LEDS_PER_SPOKE 0 //60
-#define NUM_LEDS_PER_STRIP (NUM_LEDS_PER_WHEEL + NUM_LEDS_PER_SPOKE)
+#define NUM_WHEEL_LEDS_PER_STRIP 18 //69
+#define NUM_SPOKE_LEDS_PER_STRIP 18 //60
+#define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
+#define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
+#define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_LEDS_PER_PENT (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_PENT)
+#define NUM_WHEEL_LEDS (NUM_PENTS * NUM_WHEEL_LEDS_PER_PENT)
+#define NUM_SPOKE_LEDS (NUM_PENTS * NUM_SPOKE_LEDS_PER_PENT)
 #define NUM_PENT_LEDS (NUM_PENTS * NUM_LEDS_PER_PENT)
 #define NUM_LEDS (NUM_PENT_LEDS)
 
 CRGB leds[NUM_LEDS];
 
-CRGB ledWheelSets[NUM_PENTS][NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT];
-//CRGB ledSpokeSets[NUM_PENTS][NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT];
+CRGB *ledWheelSets[NUM_WHEEL_LEDS];
+CRGB *ledSpokeSets[NUM_SPOKE_LEDS];
 
 void setup()
 {
@@ -40,10 +44,9 @@ void setup()
 
     MeltdownLogger.InitSerial(DEBUG);
     
-    delay(3000); // 3 second delay for recovery
+    delay(3000); 
     LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_PENT);
 
-    // set master brightness control
     LEDS.setBrightness(MeltdownLED.GetBrightness());
 
     setupLedArrays();
@@ -55,20 +58,20 @@ void setupLedArrays()
     {
         for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
         {
-            for (int k = 0; k < NUM_LEDS_PER_WHEEL; k++)
+            for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
             {
                 #if DEBUG
-                    Serial.print("ledWheelSets["); Serial.print((j * NUM_LEDS_PER_WHEEL) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
+                    Serial.print("ledWheelSets["); Serial.print((i * NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
                 #endif
-                ledWheelSets[i][(j * NUM_LEDS_PER_WHEEL) + k] = leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
+                ledWheelSets[(i * NUM_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
             }
 
-            for (int k = 0; k < NUM_LEDS_PER_SPOKE; k++)
+            for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
             {
                 #if DEBUG
-                    Serial.print("ledSpokeSets["); Serial.print((j * NUM_LEDS_PER_SPOKE) + k); Serial.print("]["); Serial.print(i); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k);
+                    Serial.print("ledSpokeSets["); Serial.print((i * NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k);
                 #endif
-                //ledSpokeSets[i][(j * NUM_LEDS_PER_SPOKE) + k] = leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_LEDS_PER_WHEEL + k];
+                ledSpokeSets[(i * NUM_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k];
             }
         }
     }
@@ -76,60 +79,42 @@ void setupLedArrays()
 
 void loop()
 {
-    // gutCheck();
-
-    checkModifiers();
-
     tryExecuteCommand();
 
     if (!MeltdownLED.GetPause())
     {
-        // Wheel pattern.
-        for (uint8_t i = 0; i < NUM_PENTS; i++)
+        if (MeltdownLED.GetTop())
         {
             // Call the current pattern function once, updating the 'leds' array.
-            MeltdownLED.ExecutePattern(&leds[i], NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
-            MeltdownLED.ExecuteEffect(&leds[i], NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
+            MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
+            MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
+            MeltdownLED.SetAllColor(ledSpokeSets, NUM_SPOKE_LEDS, CRGB::Black);
         }
-        // if (!gSpokesOnly)
-        // {
-        //     // Wheel pattern.
-        //     for (uint8_t i = 0; i < NUM_PENTS; i++)
-        //     {
-        //         // Call the current pattern function once, updating the 'leds' array.
-        //         MeltdownLED.ExecutePattern(ledWheelSets[i], NUM_LEDS_PER_WHEEL * NUM_STRIPS_PER_PENT);
-        //     }
-        // }
-        // else
-        // {
-        //     //setColor(ledWheelSets, NUM_LEDS_PER_WHEEL, CRGB::Black);
-        // }
-
-        // if (!gWheelsOnly)
-        // {
-        //     // Spoke pattern.
-        //     for (uint8_t i = 0; i < NUM_PENTS; i++)
-        //     {
-        //         // Call the current pattern function once, updating the 'leds' array.
-        //         //MeltdownLED.ExecutePattern(ledSpokeSets[i], NUM_LEDS_PER_SPOKE * NUM_STRIPS_PER_PENT);
-        //     }
-        // }
-        // else
-        // {
-        //     //setColor(ledSpokeSets, NUM_LEDS_PER_SPOKE, CRGB::Black);
-        // }
+        else if (MeltdownLED.GetBottom())
+        {
+            // Call the current pattern function once, updating the 'leds' array.
+            MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
+            MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
+            MeltdownLED.SetAllColor(ledWheelSets, NUM_WHEEL_LEDS, CRGB::Black);
+        }
+        else
+        {
+            // Call the current pattern function once, updating the 'leds' array.
+            MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
+            MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
+            MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
+            MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
+        }
         
-        // send the 'leds' array out to the actual LED strip
-        //LEDS.show();
+        LEDS.show();
     }
 
-    // insert a delay to keep the framerate modest
     LEDS.delay(1000 / MeltdownLED.GetFps());
 }
 
 void gutCheck()
 {   
-    static uint8_t hue = 0;
+    static int hue = 0;
     for(int i = 0; i < NUM_PENTS; i++) 
     {
         for(int j = 0; j < (NUM_LEDS_PER_PENT) ; j++) 
@@ -153,40 +138,6 @@ void gutCheck()
     LEDS.delay(10);
 }
 
-#pragma region SET MODIFIERS
-
-void checkModifiers()
-{
-}
-
-void setBoth()
-{
-    // gSpokesOnly = false;
-    // gWheelsOnly = false;
-
-    // MeltdownLogger.Debug(Serial, "Setting both...");   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, false);
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, false);
-}
-
-void setSpokesOnly()
-{
-    // gSpokesOnly = !gSpokesOnly;
-
-    // MeltdownLogger.Debug(Serial, "Setting spokes only: ", gSpokesOnly);   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.SPOKE, gSpokesOnly);
-}
-
-void setWheelsOnly()
-{
-    // gWheelsOnly = !gWheelsOnly;
-
-    // MeltdownLogger.Debug(Serial, "Setting wheels only: ", gWheelsOnly);   
-    // MeltdownSerial.SendBoolCommand(Serial, Serial2, MeltdownSerial.WHEEL, gWheelsOnly);
-}
-
-#pragma endregion SET MODIFIERS
-
 #pragma region COMMANDS
 
 void tryExecuteCommand()
@@ -205,27 +156,27 @@ void tryExecuteCommand()
             else if (command.equals(MeltdownSerial.HUE1))
             {
                 bool hueValue = MeltdownLED.ToggleHue(1);
-                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);   
+                MeltdownLogger.Debug(Serial, "Toggling Hue", hueValue);   
             }
             else if (command.equals(MeltdownSerial.HUE2))
             {
                 bool hueValue = MeltdownLED.ToggleHue(2);
-                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
+                MeltdownLogger.Debug(Serial, "Toggling Hue", hueValue);  
             }
             else if (command.equals(MeltdownSerial.HUE3))
             {
                 bool hueValue = MeltdownLED.ToggleHue(3);
-                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
+                MeltdownLogger.Debug(Serial, "Toggling Hue", hueValue);  
             }
             else if (command.equals(MeltdownSerial.HUE4))
             {
                 bool hueValue = MeltdownLED.ToggleHue(4);
-                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
+                MeltdownLogger.Debug(Serial, "Toggling Hue", hueValue);  
             }
             else if (command.equals(MeltdownSerial.HUE5))
             {
                 bool hueValue = MeltdownLED.ToggleHue(5);
-                MeltdownLogger.Debug(Serial, "Toggling Hue...", hueValue);  
+                MeltdownLogger.Debug(Serial, "Toggling Hue", hueValue);  
             }
             else if (command.equals(MeltdownSerial.PAUSE))
             {
@@ -234,32 +185,30 @@ void tryExecuteCommand()
             else if (command.equals(MeltdownSerial.PATTERN))
             {
                 // Set to black.
-                MeltdownLED.SetAllColor(leds, NUM_LEDS, CRGB::Black);
+                MeltdownLED.SetAllColor(ledWheelSets, NUM_WHEEL_LEDS, CRGB::Black);
+                MeltdownLED.SetAllColor(ledSpokeSets, NUM_SPOKE_LEDS, CRGB::Black);
                 MeltdownLED.NextPattern();
-
-                MeltdownLogger.Debug(Serial, "Next Pattern...");  
+                MeltdownLogger.Debug(Serial, "Next Pattern");  
             }
-            else if (command.equals(MeltdownSerial.SPOKE))
+            else if (command.equals(MeltdownSerial.TOP))
             {
-                // setSpokes(MeltdownLED.GetBoolValue());
+                bool topVal = MeltdownLED.ToggleTop();
+                MeltdownLogger.Debug(Serial, "Setting top position", topVal);   
             }
-            else if (command.equals(MeltdownSerial.WHEEL))
+            else if (command.equals(MeltdownSerial.BOTTOM))
             {
-                // setSpokesOnly(MeltdownLED.GetBoolValue());
-            }
-            else if (command.equals(MeltdownSerial.BOTH))
-            {
-                // setWheelsOnly(MeltdownLED.GetBoolValue());
+                bool bottomVal = MeltdownLED.ToggleBottom();
+                MeltdownLogger.Debug(Serial, "Setting bottom position", bottomVal);   
             }
             else if (command.equals(MeltdownSerial.EFFECT))
             {
                 MeltdownLED.NextEffect();
-                MeltdownLogger.Debug(Serial, "Next Effect...");  
+                MeltdownLogger.Debug(Serial, "Next Effect");  
             }
             else if (command.equals(MeltdownSerial.MODE))
             {
                 int modeNumber = MeltdownLED.NextMode();
-                MeltdownLogger.Debug(Serial, "Next Mode: ", modeNumber);
+                MeltdownLogger.Debug(Serial, "Next Mode", modeNumber);
             }
             else if (command.equals(MeltdownSerial.ANALOG_EFFECT))
             {
@@ -268,7 +217,7 @@ void tryExecuteCommand()
 
                 if (MeltdownSerial.HasChanged(currVal, modeVal))
                 {
-                    MeltdownLogger.Debug(Serial, "Setting Analog Effect: ", modeVal);   
+                    MeltdownLogger.Debug(Serial, "Setting Analog Effect", modeVal);   
                 }
             }
             else if (command.equals(MeltdownSerial.ANALOG_PATTERN))
@@ -278,12 +227,12 @@ void tryExecuteCommand()
 
                 if (MeltdownSerial.HasChanged(currVal, patternVal))
                 {
-                    MeltdownLogger.Debug(Serial, "Setting Analog Pattern: ", patternVal);   
+                    MeltdownLogger.Debug(Serial, "Setting Analog Pattern", patternVal);   
                 }
             }
             else
             {
-                MeltdownLogger.Debug(Serial, "Something went wrong reading serial command: ", command);
+                MeltdownLogger.Debug(Serial, "Something went wrong reading serial command", command);
             }
         }
         else
@@ -307,7 +256,7 @@ void serialEvent()
         // so the main loop can do something about it:
         if (inChar == '\n')
         {
-            Serial.println("Received input string: " + MeltdownSerial.GetInputString());
+            MeltdownLogger.Debug(Serial, "Received input string", MeltdownSerial.GetInputString());
             MeltdownSerial.SetInputStringComplete(true);
         }
     }
