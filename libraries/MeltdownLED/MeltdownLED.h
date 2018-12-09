@@ -37,7 +37,7 @@ class CMeltdownLED
 
     unsigned long sleepStartMillis;
     unsigned long currentMillis;
-    const unsigned long sleepPeriod = 1000 * 60 * 30; // 30 minutes
+    const unsigned long sleepPeriod = 1000L * 60 * 30; // 30 minutes
 
     // List of patterns to cycle through.  Each is defined as a separate function below.
     typedef void (CMeltdownLED::*SimplePatternList)(CRGB*[], int, int);
