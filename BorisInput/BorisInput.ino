@@ -60,7 +60,6 @@ CRGB *positionRing[NUM_LEDS_PER_LARGE_RING];
 CRGB *modeRing[NUM_LEDS_PER_MED_RING];
 CRGB *effectRing[NUM_LEDS_PER_MED_RING];
 
-int gRingLedCount = 0; // determines the number of lit LEDs for the parially lit ring
 int gRingHue = 0;
 
 struct Button
@@ -98,6 +97,8 @@ void setup()
     Serial.println("Serial port opened.");
 
     MeltdownLogger.InitSerial(DEBUG);
+
+    MeltdownLED.InitTimers();
     
     delay(3000);
     
@@ -165,39 +166,62 @@ void setupLedArrays()
 void loop()
 {
     checkButtonStates();
+
     checkModifiers();
 
-    if (!MeltdownLED.GetPause())
+    if (!MeltdownLED.GetSleeping())
     {
-        MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1);
-        MeltdownLED.ExecuteEffect(patternRing, NUM_LEDS_PER_LARGE_RING);
-        
-        MeltdownLED.ExecutePattern(modeRing, NUM_LEDS_PER_MED_RING, 0, 1);
-        MeltdownLED.ExecuteEffect(modeRing, NUM_LEDS_PER_MED_RING);
-    }
+        if (!MeltdownLED.GetPause())
+        {
+            MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1);
+            MeltdownLED.ExecuteEffect(patternRing, NUM_LEDS_PER_LARGE_RING);
+            
+            MeltdownLED.ExecutePattern(modeRing, NUM_LEDS_PER_MED_RING, 0, 1);
+            MeltdownLED.ExecuteEffect(modeRing, NUM_LEDS_PER_MED_RING);
+        }
 
-    if (MeltdownLED.GetTop())
-    {
-        setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Top, 64);
-    }
-    else if (MeltdownLED.GetBottom())
-    {
-        setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Bottom, 128);
+        if (MeltdownLED.GetTop())
+        {
+            setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Top, 64);
+        }
+        else if (MeltdownLED.GetBottom())
+        {
+            setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Bottom, 128);
+        }
+        else
+        {
+            setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Full, 192);
+        }
+
+        setRingColor(effectValRing, NUM_LEDS_PER_LARGE_RING, Partial, 0);
+        MeltdownLED.ExecuteEffect(effectValRing, NUM_LEDS_PER_LARGE_RING);
+
+        setColor(effectRing, NUM_LEDS_PER_MED_RING, CRGB::Black);
+        MeltdownLED.ExecuteEffect(effectRing, NUM_LEDS_PER_MED_RING, 1);
+
+        trySleep();
     }
     else
     {
-        setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Full, 192);
+        executeSleepPattern();
     }
-
-    setRingColor(effectValRing, NUM_LEDS_PER_LARGE_RING, Partial, 0);
-    MeltdownLED.ExecuteEffect(effectValRing, NUM_LEDS_PER_LARGE_RING);
-
-    setColor(effectRing, NUM_LEDS_PER_MED_RING, CRGB::Black);
-    MeltdownLED.ExecuteEffect(effectRing, NUM_LEDS_PER_MED_RING, 1);
 
     LEDS.delay(1000 / MeltdownLED.GetFps());
     
     LEDS.show();
+}
+
+void executeSleepPattern()
+{
+    static int hue = 0;
+
+    setAllColor(CRGB::Black);
+    setRingColor(patternRing, NUM_LEDS_PER_LARGE_RING, Full, hue);
+
+    EVERY_N_MILLIS(50)
+    {
+        hue++;
+    }
 }
 
 void nextPattern()
@@ -222,7 +246,7 @@ void nextMode()
 {
     int modeNumber = MeltdownLED.NextMode();
 
-    MeltdownLogger.Debug(Serial, "Next Mode: ", modeNumber);
+    MeltdownLogger.Debug(Serial, "Next Mode", modeNumber);
     MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.MODE, true);
 }
 
@@ -244,7 +268,7 @@ void setBrightness()
 
     if (MeltdownSerial.HasChanged(currVal, brightVal))
     {
-        MeltdownLogger.Debug(Serial, "Setting Brightness: ", brightVal);   
+        MeltdownLogger.Debug(Serial, "Setting Brightness", brightVal);   
         MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.BRIGHTNESS, brightVal);
     }
 }
@@ -258,7 +282,7 @@ void toggleHue(int index, String command)
 {
     bool hueValue = MeltdownLED.ToggleHue(index);
     
-    MeltdownLogger.Debug(Serial, "Toggling Hue: ", command);   
+    MeltdownLogger.Debug(Serial, "Toggling Hue", command);   
     MeltdownSerial.SendCommand(Serial, Serial1, command, hueValue);
 }
 
@@ -266,7 +290,7 @@ void setTopPosition()
 {
     bool topVal = MeltdownLED.ToggleTop();
 
-    MeltdownLogger.Debug(Serial, "Setting top position: ", topVal);   
+    MeltdownLogger.Debug(Serial, "Setting top position", topVal);   
     MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.TOP, topVal);
 }
 
@@ -274,7 +298,7 @@ void setBottomPosition()
 {
     bool bottomVal = MeltdownLED.ToggleBottom();
 
-    MeltdownLogger.Debug(Serial, "Setting bottom position: ", bottomVal);   
+    MeltdownLogger.Debug(Serial, "Setting bottom position", bottomVal);   
     MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.BOTTOM, bottomVal);
 }
 
@@ -285,7 +309,7 @@ void setAnalogPattern()
 
     if (MeltdownSerial.HasChanged(currVal, patternVal))
     {
-        MeltdownLogger.Debug(Serial, "Setting Analog Pattern: ", patternVal);   
+        MeltdownLogger.Debug(Serial, "Setting Analog Pattern", patternVal);   
         MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ANALOG_PATTERN, patternVal);
     }
 }
@@ -297,7 +321,7 @@ void setAnalogEffect()
 
     if (MeltdownSerial.HasChanged(currVal, modeVal))
     {
-        MeltdownLogger.Debug(Serial, "Setting Analog Effect: ", modeVal);   
+        MeltdownLogger.Debug(Serial, "Setting Analog Effect", modeVal);   
         MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ANALOG_EFFECT, modeVal);
     }
 }
@@ -306,13 +330,42 @@ void togglePause()
 {
     bool pauseVal = MeltdownLED.TogglePause();
 
-    MeltdownLogger.Debug(Serial, "Setting Pause: ", pauseVal);   
+    MeltdownLogger.Debug(Serial, "Setting Pause", pauseVal);   
     MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.PAUSE, pauseVal);
+}
+
+void trySleep()
+{
+    // Check if sleep mode has been enabled. If so, send the serial command.
+    if (MeltdownLED.CheckSleepTimer())
+    {
+        MeltdownLogger.Debug(Serial, "Entering Sleep Mode...");  
+        MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.SLEEP, true);
+    }
+}
+
+void tryWakeUp()
+{
+    if (MeltdownLED.GetSleeping())
+    {
+        MeltdownLogger.Debug(Serial, "Waking Up...");   
+        MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.SLEEP, false);
+    }
+    MeltdownLED.SetSleeping(false);
 }
 
 #pragma endregion SET MODIFIERS
 
 #pragma region PATTERNS
+
+void setAllColor(CRGB::HTMLColorCode color)
+{
+    setColor(patternRing, NUM_LEDS_PER_LARGE_RING, color);
+    setColor(effectValRing, NUM_LEDS_PER_LARGE_RING, color);
+    setColor(positionRing, NUM_LEDS_PER_LARGE_RING, color);
+    setColor(modeRing, NUM_LEDS_PER_MED_RING, color);
+    setColor(effectRing, NUM_LEDS_PER_MED_RING, color);
+}
 
 void setColor(CRGB *ledSets[], int numLeds, CRGB::HTMLColorCode color)
 {
@@ -353,16 +406,16 @@ bool canColorRingLed(int index, int numLeds, RingPosition position)
 
 int getRingLedCount(int numLeds)
 {
-    int currVal = gRingLedCount;
-    int newVal = MeltdownSerial.GetAnalogValue(PARTIAL_RING_PIN, currVal);
+    static int ledCount = 0;
+    int newVal = MeltdownSerial.GetAnalogValue(PARTIAL_RING_PIN, ledCount);
 
-    if (MeltdownSerial.HasChanged(currVal, newVal))
+    if (MeltdownSerial.HasChanged(ledCount, newVal))
     {
-        gRingLedCount = map(newVal, 0, 1023, 0, numLeds + 1);
+        ledCount = map(newVal, 0, 1023, 0, numLeds + 1);
         gRingHue = map(newVal, 0, 1023, 0, 255);
     }
 
-    return gRingLedCount;
+    return ledCount;
 }
 
 #pragma endregion PATTERNS
@@ -394,17 +447,26 @@ void checkButtonState(Button *button)
     // Check if the button is depressed. If it is, the buttonState is LOW.
     if (button->state == LOW && button->previousState == HIGH) 
     {
-        button->callback();
+        if (!MeltdownLED.GetSleeping())
+        {
+            button->callback();
+        }
+        tryWakeUp();
 
         button->previousState = LOW;
     }
     // Check if the button is pressed. If it is, the buttonState is HIGH.
     else if (button->state == HIGH && button->previousState == LOW)
     {
-        if (!button->isToggle)
+        if (!MeltdownLED.GetSleeping())
         {
-            button->callback();
+            if (!button->isToggle)
+            {
+                button->callback();
+            }
         }
+        tryWakeUp();
+
         button->previousState = HIGH;
     }
 }

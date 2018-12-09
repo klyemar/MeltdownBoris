@@ -126,6 +126,7 @@ class CMeltdownSerial
     const String ANALOG_PATTERN = "ANPT";
     const String ANALOG_EFFECT = "ANEF";
     const String PAUSE = "PAUS";
+    const String SLEEP = "SLEP";
 
     String PrepareBoolCommand(String command, bool value) { return PrepareCommand(command, value ? 1 : 0); }
 
@@ -154,7 +155,7 @@ class CMeltdownSerial
  
         if (serial2.availableForWrite())
         {
-            MeltdownLogger.Debug(serial1, "Sending command: ", serialCommand);   
+            MeltdownLogger.Debug(serial1, "Sending command", serialCommand);   
             for (uint8_t i = 0; i < serialCommand.length(); i++)
             {
                 serial2.write(serialCommand[i]);   // Push each char 1 by 1 on each loop pass.

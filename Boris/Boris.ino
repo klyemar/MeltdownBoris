@@ -41,7 +41,6 @@ void setup()
     Serial1.begin(9600);
 
     Serial.println("Serial port opened.");
-
     MeltdownLogger.InitSerial(DEBUG);
     
     delay(3000); 
@@ -81,61 +80,48 @@ void loop()
 {
     tryExecuteCommand();
 
-    if (!MeltdownLED.GetPause())
+    if (!MeltdownLED.GetSleeping())
     {
-        if (MeltdownLED.GetTop())
+        if (!MeltdownLED.GetPause())
         {
-            // Call the current pattern function once, updating the 'leds' array.
-            MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
-            MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
-            MeltdownLED.SetAllColor(ledSpokeSets, NUM_SPOKE_LEDS, CRGB::Black);
+            if (MeltdownLED.GetTop())
+            {
+                // Call the current pattern function once, updating the 'leds' array.
+                MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
+                MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
+                MeltdownLED.SetAllColor(ledSpokeSets, NUM_SPOKE_LEDS, CRGB::Black);
+            }
+            else if (MeltdownLED.GetBottom())
+            {
+                // Call the current pattern function once, updating the 'leds' array.
+                MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
+                MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
+                MeltdownLED.SetAllColor(ledWheelSets, NUM_WHEEL_LEDS, CRGB::Black);
+            }
+            else
+            {
+                // Call the current pattern function once, updating the 'leds' array.
+                MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
+                MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
+                MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
+                MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
+            }
         }
-        else if (MeltdownLED.GetBottom())
-        {
-            // Call the current pattern function once, updating the 'leds' array.
-            MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
-            MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
-            MeltdownLED.SetAllColor(ledWheelSets, NUM_WHEEL_LEDS, CRGB::Black);
-        }
-        else
-        {
-            // Call the current pattern function once, updating the 'leds' array.
-            MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
-            MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
-            MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
-            MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
-        }
-        
-        LEDS.show();
     }
-
+    else
+    {
+        executeSleepPattern();
+    }
+            
     LEDS.delay(1000 / MeltdownLED.GetFps());
-}
-
-void gutCheck()
-{   
-    static int hue = 0;
-    for(int i = 0; i < NUM_PENTS; i++) 
-    {
-        for(int j = 0; j < (NUM_LEDS_PER_PENT) ; j++) 
-        {
-            leds[(i*(NUM_LEDS_PER_PENT)) + j] = CHSV((32*i) + hue+j,192,255);
-        }
-    }
-
-    // Set the first n leds on each strip to show which strip it is
-    for(int i = 0; i < NUM_PENTS; i++) 
-    {
-        for(int j = 0; j <= i; j++) 
-        {
-            leds[(i*(NUM_LEDS_PER_PENT)) + j] = CRGB::Red;
-        }
-    }
-
-    hue++;
 
     LEDS.show();
-    LEDS.delay(10);
+}
+
+void executeSleepPattern()
+{
+    MeltdownLED.Sunrise(ledWheelSets, NUM_WHEEL_LEDS);
+    MeltdownLED.Sunrise(ledSpokeSets, NUM_SPOKE_LEDS);
 }
 
 #pragma region COMMANDS
@@ -229,6 +215,10 @@ void tryExecuteCommand()
                 {
                     MeltdownLogger.Debug(Serial, "Setting Analog Pattern", patternVal);   
                 }
+            }
+            else if (command.equals(MeltdownSerial.SLEEP))
+            {
+                MeltdownLED.SetSleeping();
             }
             else
             {

@@ -33,11 +33,15 @@ class CMeltdownLED
     bool gPause = false;
     bool gTop = false;
     bool gBottom = false;
+    bool gSleeping = false;
+
+    unsigned long sleepStartMillis;
+    unsigned long currentMillis;
+    const unsigned long sleepPeriod = 1000 * 10; // 1000 * 60 * 60 * 2
 
     // List of patterns to cycle through.  Each is defined as a separate function below.
     typedef void (CMeltdownLED::*SimplePatternList)(CRGB*[], int, int);
-    SimplePatternList gPatterns[6] = {
-        &CMeltdownLED::Sunrise,
+    SimplePatternList gPatterns[5] = {
         &CMeltdownLED::Rainbow, 
         &CMeltdownLED::Confetti, 
         &CMeltdownLED::Sinelon, 
@@ -140,6 +144,22 @@ class CMeltdownLED
 
     bool GetPause() { return gPause; }
 
+    // SLEEP //
+
+    bool SetSleeping(bool isSleeping)
+    {
+        gSleeping = isSleeping;
+        // If we're waking up, reset the timer.
+        if (!gSleeping)
+        {
+            sleepStartMillis = millis();
+        }
+        return gSleeping;
+    }
+    void SetSleeping() { gSleeping = MeltdownSerial.GetBoolValue(); }
+
+    bool GetSleeping() { return gSleeping; }
+
     // POSITION //
 
     bool ToggleTop()
@@ -182,6 +202,20 @@ class CMeltdownLED
         }
     }
 
+    void HueIncrementEffect(CRGB *ledSet[], int numLeds)
+    {
+        static int hue = 0;
+        
+        int effectVal = GetAnalogEffect(100, 500);
+        EVERY_N_MILLIS (effectVal)
+        {
+            for (int i = 0; i < numLeds; i++)
+            {
+                // *ledSet[i]
+            }
+        }
+    }
+
     #pragma endregion EFFECTS
 
     #pragma region MODES
@@ -208,6 +242,35 @@ class CMeltdownLED
 
     #pragma endregion MODES
 
+    #pragma region TIMERS
+
+    void InitTimers()
+    {
+        sleepStartMillis = millis();
+    }
+
+    bool IsTimerOver(unsigned long period, unsigned long timerMillis)
+    {
+        currentMillis = millis();
+        return currentMillis - timerMillis >= period;
+    }
+
+    // Returns true as soon as the sleep timer has been exceeded.
+    bool CheckSleepTimer()
+    {
+        // Skip if already sleeping.
+        if (!GetSleeping()) 
+        {
+            if (IsTimerOver(sleepPeriod, sleepStartMillis))
+            {
+                return SetSleeping(true);
+            }
+        }
+        return false;
+    }
+
+    #pragma endregion TIMERS
+
     #pragma region PATTERNS
 
     int GetPatternNumber(int offset = 0) { return (gCurrentPatternNumber + offset) % ARRAY_SIZE(gPatterns); }
@@ -229,36 +292,6 @@ class CMeltdownLED
         for (int i = 0; i < numLeds; i++)
         {
             *ledSet[i] = color;
-        }
-    }
-
-    void Sunrise(CRGB *ledSet[], int numLeds, int modeOffset = 0)
-    {      
-        // total sunrise length, in minutes
-        static const uint8_t sunriseLength = 30;
-
-        // how often (in seconds) should the heat color increase?
-        // for the default of 30 minutes, this should be about every 7 seconds
-        // 7 seconds x 256 gradient steps = 1,792 seconds = ~30 minutes
-        static const uint8_t interval = (sunriseLength * 60) / 256;
-
-        // current gradient palette color index
-        static uint8_t heatIndex = 0; // start out at 0
-
-        // HeatColors_p is a gradient palette built in to FastLED
-        // that fades from black to red, orange, yellow, white
-        // feel free to use another palette or define your own custom one
-        CRGB color = ColorFromPalette(HeatColors_p, heatIndex);
-
-        // fill the entire strip with the current color
-        SetAllColor(ledSet, numLeds, color);
-
-        // slowly increase the heat
-        EVERY_N_SECONDS(interval) {
-            // stop incrementing at 255, we don't want to overflow back to 0
-            if (heatIndex < 255) {
-                heatIndex++;
-            }
         }
     }
 
@@ -378,22 +411,44 @@ class CMeltdownLED
         int fade = GetAnalogPattern(3, 100);
         FadeSetsToBlackBy(ledSet, numLeds, fade);
 
-        byte dothue = 0;
-        for (int i = 0; i < 8; i++)
-        {
-            int beat = beatsin16(i + 7, 0, numLeds - 1);
-            *ledSet[beat] |= CHSV(dothue, 200, 255);
-            dothue += 32;
-        }
+        int numBalls = 3;
 
         // Modes
-        int numModes = 1;
+        int numModes = 3;
         switch (GetModeNumber(numModes, modeOffset))
         {
             case 1:
-                // Maximize the brightness of all colors.
-                MaximizeBrightness(ledSet, numLeds);
+                numBalls = 5;
                 break;
+            case 2:
+                numBalls = 7;
+                break;
+            case 3:
+                numBalls = 9;
+                break;
+        }
+
+        for (int i = 0; i < numBalls; i++)
+        {
+            int dotHue = i * (255 / numBalls);
+            int pos = beatsin16(i + 7, 0, numLeds - 1);
+
+            *ledSet[pos] |= CHSV(dotHue + gHue, 200, 255);
+        }
+    }
+
+    void Sunrise(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+    {      
+        static const uint8_t sunriseMinutes = 8;
+
+        static uint8_t heatIndex = 0;
+        CRGB color = ColorFromPalette(HeatColors_p, (heatIndex % 255));
+
+        SetAllColor(ledSet, numLeds, color);
+
+        static const uint8_t interval = (sunriseMinutes * 60) / 256;
+        EVERY_N_SECONDS(interval) {
+            heatIndex++;
         }
     }
 
