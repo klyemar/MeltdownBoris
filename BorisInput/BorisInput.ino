@@ -137,11 +137,13 @@ void setupButtons()
     effectButton.isToggle = true;
     modeButton.callback = nextMode;
     modeButton.isToggle = true;
+    hue1Button.callback = toggleHue1;
+    hue1Button.isToggle = true;
+    hue2Button.callback = toggleHue2;
+    hue2Button.isToggle = true;
     
     topButton.callback = setTopPosition;
     bottomButton.callback = setBottomPosition;
-    hue1Button.callback = toggleHue1;
-    hue2Button.callback = toggleHue2;
     hue3Button.callback = toggleHue3;
     hue4Button.callback = toggleHue4;
     pauseButton.callback = togglePause;
