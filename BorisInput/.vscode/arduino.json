@@ -1,7 +1,0 @@
-{
-    "sketch": "BorisInput.ino",
-    "port": "COM11",
-    "board": "arduino:avr:mega",
-    "output": "../build",
-    "configuration": "cpu=atmega2560"
-}
