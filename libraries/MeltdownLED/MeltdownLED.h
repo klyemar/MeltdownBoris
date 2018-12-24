@@ -194,11 +194,10 @@ class CMeltdownLED
 
     void GlitterEffect(CRGB *ledSet[], int numLeds)
     {
-        int chanceOfGlitter = GetAnalogEffect(0, 75);
+        int chanceOfGlitter = GetAnalogEffect(15, 115);
         if (random8() < chanceOfGlitter)
         {
-            int pos = random16(numLeds);
-            *ledSet[pos] += CRGB::White;
+            SetRandomColor(ledSet, numLeds, 3, CRGB::White);
         }
     }
 
@@ -295,6 +294,23 @@ class CMeltdownLED
         }
     }
 
+    void SetRandomColor(CRGB *ledSet[], int numLeds, int numPositions, int hueOffset = 0)
+    {
+        for (int i = 0; i < numPositions; i++)
+        {
+            *ledSet[random16(numLeds)] += CHSV(gHue + random8(hueOffset), 200, 255);
+        }
+    }
+
+    void SetRandomColor(CRGB *ledSet[], int numLeds, int numPositions, CRGB::HTMLColorCode color)
+    {
+        for (int i = 0; i < numPositions; i++)
+        {
+            *ledSet[random16(numLeds)] += color;
+        }
+    }
+
+
     void Rainbow(CRGB *ledSet[], int numLeds, int modeOffset = 0)
     {
         int deltaHue = GetAnalogPattern(1, 15);
@@ -316,25 +332,18 @@ class CMeltdownLED
         int fade = GetAnalogPattern(2, 30);
         FadeSetsToBlackBy(ledSet, numLeds, fade);
 
-        int randLed = random16(numLeds);
-        *ledSet[randLed] += CHSV(gHue + random8(64), 200, 255);
-
         // Modes
-        int numModes = 3;
+        int numModes = 2;
         switch (GetModeNumber(numModes, modeOffset))
         {
             case 1:
-                // Add a slight delay.
-                LEDS.delay(8);
+                SetRandomColor(ledSet, numLeds, 12, 64);
                 break;
             case 2:
-                LEDS.delay(15);
-                break;
-            case 3:
-                LEDS.delay(30);
+                SetRandomColor(ledSet, numLeds, 18, 64);
                 break;
             default:
-                LEDS.delay(3);
+                SetRandomColor(ledSet, numLeds, 6, 64);
                 break;
         }
     }
@@ -345,27 +354,39 @@ class CMeltdownLED
         int fade = GetAnalogPattern(2, 30);
         FadeSetsToBlackBy(ledSet, numLeds, fade);
 
-        int pos = beatsin16(13, 0, numLeds - 1);
+        int pos = beatsin16(8, 0, numLeds - 1);
         *ledSet[pos] += CHSV(gHue + 64, 255, 192);
 
         // Modes
-        int numModes = 3;
+        int numModes = 4;
         switch (GetModeNumber(numModes, modeOffset))
         {
             case 1:
                 {
                     // Add a second, opposite dot moving in the opposite direction.
-                    int opppositePos = (numLeds - 1) - (beatsin16(13, 0, numLeds - 1));
+                    int opppositePos = (numLeds - 1) - (beatsin16(8, 0, numLeds - 1));
                     *ledSet[opppositePos] += CHSV(gHue + 128, 255, 192);
                 }
                 break;
             case 2:
-                *ledSet[(pos + (int)(numLeds / 2)) % numLeds] += CHSV(gHue + 128, 255, 192);
+                GenerateSinelons(ledSet, numLeds, 2, pos);
                 break;
             case 3:
-                *ledSet[(pos + (int)(numLeds / 3)) % numLeds] += CHSV(gHue + 128, 255, 192);
-                *ledSet[(pos + (int)(numLeds / 3 * 2)) % numLeds] += CHSV(gHue + 192, 255, 192);
+                GenerateSinelons(ledSet, numLeds, 3, pos);
                 break;
+            case 4:
+                GenerateSinelons(ledSet, numLeds, 5, pos);
+                break;
+        }
+    }
+
+    void GenerateSinelons(CRGB *ledSet[], int numLeds, int numSinelons, int pos)
+    {
+        for (int i = 0; i < numSinelons; i++)
+        {
+            int hue = gHue + (int)((255 / numSinelons) * i);
+            
+            *ledSet[(pos + (int)(numLeds / numSinelons) * (i + 1)) % numLeds] += CHSV(hue, 255, 192);
         }
     }
 

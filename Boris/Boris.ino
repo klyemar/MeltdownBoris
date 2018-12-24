@@ -112,8 +112,6 @@ void loop()
     {
         executeSleepPattern();
     }
-            
-    LEDS.delay(1000 / MeltdownLED.GetFps());
 
     LEDS.show();
 }
@@ -166,7 +164,7 @@ void tryExecuteCommand()
             }
             else if (command.equals(MeltdownSerial.PAUSE))
             {
-                MeltdownLED.SetPause();
+                //MeltdownLED.SetPause();
             }
             else if (command.equals(MeltdownSerial.PATTERN))
             {
