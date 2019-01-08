@@ -1,7 +1,8 @@
 #include "MeltdownLogger.h"
 
-CMeltdownLogger MeltdownLogger;
+namespace Meltdown
+{
+	CMeltdownLogger MeltdownLogger;
 
-CMeltdownLogger::CMeltdownLogger() {
-    
+	CMeltdownLogger::CMeltdownLogger() {}
 }

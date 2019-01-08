@@ -1,175 +1,179 @@
 #include <Arduino.h>
 #include <MeltdownLogger.h>
 
+namespace Meltdown
+{
+
 #ifndef MELTDOWN_SERIAL
 #define MELTDOWN_SERIAL
 
-class CMeltdownSerial
-{
-    public: CMeltdownSerial();
+	class CMeltdownSerial
+	{
+		public: CMeltdownSerial();
 
-    int m_analogTolerance;
+		int m_analogTolerance;
 
-    // Serial input commands.
-    String m_inputString;
-    boolean m_inputStringComplete; // whether the String is complete
+		// Serial input commands.
+		String m_inputString;
+		boolean m_inputStringComplete; // whether the String is complete
 
-    #pragma region INPUTS
+#pragma region INPUTS
 
-    int GetAnalogValue(int currVal)
-    {
-        int val = currVal;
-        
-        if (!m_inputString.equals(""))
-        {
-            val = GetSerialValue(m_inputString, currVal);
-        }
+		int GetAnalogValue(int currVal)
+		{
+			int val = currVal;
 
-        return val;
-    }
+			if (!m_inputString.equals(""))
+			{
+				val = GetSerialValue(m_inputString, currVal);
+			}
 
-    int GetAnalogValue(int pin, int currVal)
-    {
-        if (pin == -1)
-        {
-            return GetAnalogValue(currVal);
-        }
-        else
-        {
-            int val = analogRead(pin);
-            if (HasChanged(currVal, val))
-            {
-                return val;
-            }
+			return val;
+		}
 
-            return currVal;
-        }
-    }
+		int GetAnalogValue(int pin, int currVal)
+		{
+			if (pin == -1)
+			{
+				return GetAnalogValue(currVal);
+			}
+			else
+			{
+				int val = analogRead(pin);
+				if (HasChanged(currVal, val))
+				{
+					return val;
+				}
 
-    int GetSerialValue(String inputString, int currVal)
-    {
-        if (inputString[0] == '#' && inputString.length() >= 10)
-        {
-            String valString = inputString.substring(5, 9);
-            int val = valString.toInt();
+				return currVal;
+			}
+		}
 
-            // A value of 0 indicates an error but is acceptable if the intended value is actually 0.
-            if (val != 0 || valString.equals("0000"))
-            {
-                return val;
-            }
-        }
+		int GetSerialValue(String inputString, int currVal)
+		{
+			if (inputString[0] == '#' && inputString.length() >= 10)
+			{
+				String valString = inputString.substring(5, 9);
+				int val = valString.toInt();
 
-        return currVal;
-    }
+				// A value of 0 indicates an error but is acceptable if the intended value is actually 0.
+				if (val != 0 || valString.equals("0000"))
+				{
+					return val;
+				}
+			}
 
-    // Because an analog read can waiver between values, we need to determine if an analog value has changed enough
-    // for us to do anything about.
-    bool HasChanged(int oldVal, int newVal)
-    {
-        // Otherwise, check that the value has surpassed the tolerance threshold.
-        return newVal <= (oldVal - m_analogTolerance) || newVal >= (oldVal + m_analogTolerance);
-    }
+			return currVal;
+		}
 
-    String GetInputString() { return m_inputString; }
+		// Because an analog read can waiver between values, we need to determine if an analog value has changed enough
+		// for us to do anything about.
+		bool HasChanged(int oldVal, int newVal)
+		{
+			// Otherwise, check that the value has surpassed the tolerance threshold.
+			return newVal <= (oldVal - m_analogTolerance) || newVal >= (oldVal + m_analogTolerance);
+		}
 
-    void ClearInputString() { m_inputString = ""; }
+		String GetInputString() { return m_inputString; }
 
-    void AddCharToInputString(char inChar) { m_inputString += inChar; }
+		void ClearInputString() { m_inputString = ""; }
 
-    bool GetInputStringComplete() { return m_inputStringComplete; }
+		void AddCharToInputString(char inChar) { m_inputString += inChar; }
 
-    void SetInputStringComplete(bool value) { m_inputStringComplete = value; }
+		bool GetInputStringComplete() { return m_inputStringComplete; }
 
-    String GetCommand()
-    {
-        if (m_inputString[0] == '#' && m_inputString.length() >= 6)
-        {
-            return m_inputString.substring(1, 5);
-        }
-        return "";
-    }
+		void SetInputStringComplete(bool value) { m_inputStringComplete = value; }
 
-    int GetValue()
-    {    
-        int val = 0;
-        if (m_inputString[0] == '#' && m_inputString.length() >= 10)
-        {
-            String valString = m_inputString.substring(5, 9);
-            val = valString.toInt();
-        }
-        return val;
-    }
+		String GetCommand()
+		{
+			if (m_inputString[0] == '#' && m_inputString.length() >= 6)
+			{
+				return m_inputString.substring(1, 5);
+			}
+			return "";
+		}
 
-    bool GetBoolValue()
-    {
-        int val = GetValue();
-        return val != 0 ? true : false;
-    }
+		int GetValue()
+		{
+			int val = 0;
+			if (m_inputString[0] == '#' && m_inputString.length() >= 10)
+			{
+				String valString = m_inputString.substring(5, 9);
+				val = valString.toInt();
+			}
+			return val;
+		}
 
-    #pragma endregion INPUTS
+		bool GetBoolValue()
+		{
+			int val = GetValue();
+			return val != 0 ? true : false;
+		}
 
-    #pragma region COMMANDS
+#pragma endregion INPUTS
 
-    const String PATTERN = "PTRN";
-    const String EFFECT = "EFCT";
-    const String MODE = "MODE";
-    const String BRIGHTNESS = "BRIT";
-    const String HUE1 = "HUE1";
-    const String HUE2 = "HUE2";
-    const String HUE3 = "HUE3";
-    const String HUE4 = "HUE4";
-    const String HUE5 = "HUE5";
-    const String TOP = "TOPP";
-    const String BOTTOM = "BOTP";
-    const String BOTH = "BOTH";
-    const String ANALOG_PATTERN = "ANPT";
-    const String ANALOG_EFFECT = "ANEF";
-    const String PAUSE = "PAUS";
-    const String SLEEP = "SLEP";
+#pragma region COMMANDS
 
-    String PrepareBoolCommand(String command, bool value) { return PrepareCommand(command, value ? 1 : 0); }
+		const String PATTERN = "PTRN";
+		const String EFFECT = "EFCT";
+		const String MODE = "MODE";
+		const String BRIGHTNESS = "BRIT";
+		const String HUE1 = "HUE1";
+		const String HUE2 = "HUE2";
+		const String HUE3 = "HUE3";
+		const String HUE4 = "HUE4";
+		const String HUE5 = "HUE5";
+		const String TOP = "TOPP";
+		const String BOTTOM = "BOTP";
+		const String BOTH = "BOTH";
+		const String ANALOG_PATTERN = "ANPT";
+		const String ANALOG_EFFECT = "ANEF";
+		const String PAUSE = "PAUS";
+		const String SLEEP = "SLEP";
 
-    String PrepareCommand(String command, int value)
-    {
-        if (value < 0) value = 0;
-        if (value > 9999) value = 9999;
+		String PrepareBoolCommand(String command, bool value) { return PrepareCommand(command, value ? 1 : 0); }
 
-        String valueString = "";
-        if (value < 1000) valueString += "0";
-        if (value < 100) valueString += "0";
-        if (value < 10) valueString += "0";
-        valueString += value;
+		String PrepareCommand(String command, int value)
+		{
+			if (value < 0) value = 0;
+			if (value > 9999) value = 9999;
 
-        return "#" + command + valueString + "\n";
-    }
+			String valueString = "";
+			if (value < 1000) valueString += "0";
+			if (value < 100) valueString += "0";
+			if (value < 10) valueString += "0";
+			valueString += value;
 
-    void SendBoolCommand(Stream &serial1, Stream &serial2, String command, bool value)
-    {
-        SendCommand(serial1, serial2, command, value ? 1 : 0);
-    }
+			return "#" + command + valueString + "\n";
+		}
 
-    void SendCommand(Stream &serial1, Stream &serial2, String command, int value)
-    {
-        String serialCommand = PrepareCommand(command, value);
- 
-        if (serial2.availableForWrite())
-        {
-            MeltdownLogger.Debug(serial1, "Sending command", serialCommand);   
-            for (uint8_t i = 0; i < serialCommand.length(); i++)
-            {
-                serial2.write(serialCommand[i]);   // Push each char 1 by 1 on each loop pass.
-            }
-        }
-        else
-        {
-            MeltdownLogger.Debug(serial1, "Failed to send command, Serial unavailable.");  
-        }
-    }
+		void SendBoolCommand(Stream &serial1, Stream &serial2, String command, bool value)
+		{
+			SendCommand(serial1, serial2, command, value ? 1 : 0);
+		}
 
-    #pragma endregion COMMANDS
-};
+		void SendCommand(Stream &serial1, Stream &serial2, String command, int value)
+		{
+			String serialCommand = PrepareCommand(command, value);
 
-extern CMeltdownSerial MeltdownSerial;
+			if (serial2.availableForWrite())
+			{
+				MeltdownLogger.Debug(serial1, "Sending command", serialCommand);
+				for (uint8_t i = 0; i < serialCommand.length(); i++)
+				{
+					serial2.write(serialCommand[i]);   // Push each char 1 by 1 on each loop pass.
+				}
+			}
+			else
+			{
+				MeltdownLogger.Debug(serial1, "Failed to send command, Serial unavailable.");
+			}
+		}
+
+#pragma endregion COMMANDS
+	};
+
+	extern CMeltdownSerial MeltdownSerial;
 
 #endif
+}

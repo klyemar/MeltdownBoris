@@ -1,9 +1,12 @@
 #include "MeltdownSerial.h"
 
-CMeltdownSerial MeltdownSerial;
-
-CMeltdownSerial::CMeltdownSerial() 
+namespace Meltdown
 {
-    m_analogTolerance = 15;
-    m_inputString.reserve(100);
+	CMeltdownSerial MeltdownSerial;
+
+	CMeltdownSerial::CMeltdownSerial()
+	{
+		m_analogTolerance = 15;
+		m_inputString.reserve(100);
+	}
 }

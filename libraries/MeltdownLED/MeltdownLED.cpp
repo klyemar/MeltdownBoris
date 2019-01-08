@@ -1,7 +1,10 @@
 #include "MeltdownLED.h"
 
-CMeltdownLED MeltdownLED;
-
-CMeltdownLED::CMeltdownLED() 
+namespace Meltdown
 {
+	CMeltdownLED MeltdownLED;
+
+	CMeltdownLED::CMeltdownLED()
+	{
+	}
 }
