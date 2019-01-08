@@ -41,7 +41,6 @@
 
 *.vcxproj
 *.vcxproj.*
-*.sln
 *.elf
 *.hex
 *.vmps.*
