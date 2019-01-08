@@ -1,0 +1,39 @@
+{
+  "configurations": [
+    {
+      "name": "Visual Micro",
+      "intelliSenseMode": "msvc-x64",
+      "includePath": [
+        "${projectRoot}..\\Boris",
+        "${projectRoot}..\\libraries\\OctoWS2811",
+        "${projectRoot}..\\libraries\\FastLED",
+        "${projectRoot}..\\libraries\\MeltdownLED",
+        "${projectRoot}..\\libraries\\MeltdownSerial",
+        "${projectRoot}..\\libraries\\MeltdownLogger",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\libraries",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\arduino\\avr\\libraries",
+        "${projectRoot}..\\libraries",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\arduino\\avr\\cores\\teensy3",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\arduino\\avr\\cores\\teensy3\\avr",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\arduino\\avr\\cores\\teensy3\\util",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\tools\\avr\\avr\\include",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\tools\\avr\\avr\\include\\avr",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\tools\\avr\\lib\\gcc\\avr\\4.8.1\\include",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\tools\\avr\\lib\\gcc\\avr\\4.9.2\\include",
+        "${projectRoot}..\\..\\..\\..\\..\\Program Files (x86)\\ArduinoTeensy\\hardware\\tools\\avr\\lib\\gcc\\avr\\4.9.3\\include"
+      ],
+      "defines": [
+        "__HARDWARE_MK20dx256__",
+        "__HARDWARE_MK20DX256__",
+        "__MK20DX256__",
+        "TEENSYDUINO=145",
+        "ARDUINO=10808",
+        "F_CPU=96000000",
+        "USB_SERIAL",
+        "LAYOUT_US_ENGLISH",
+        "__cplusplus=201103L",
+        "_VMICRO_INTELLISENSE"
+      ]
+    }
+  ]
+}
