@@ -34,3 +34,17 @@
 /build
 /Boris/.vscode/
 /BorisInput/.vscode/
+/Boris/.vs
+/Boris/CppProperties.json
+/.vs
+/ComputerToArduino/ComputerToArduino/obj/
+
+*.vcxproj
+*.vcxproj.*
+*.sln
+*.elf
+*.hex
+*.vmps.*
+.suo
+board.buildinfo
+*_vm
