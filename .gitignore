@@ -39,8 +39,6 @@
 /.vs
 /ComputerToArduino/ComputerToArduino/obj/
 
-*.vcxproj
-*.vcxproj.*
 *.elf
 *.hex
 *.vmps.*
