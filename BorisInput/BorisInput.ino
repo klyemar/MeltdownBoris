@@ -13,25 +13,25 @@ namespace Meltdown
 {
 	#define DEBUG true
 
-	#define RING_PIN_1 8
-	#define RING_PIN_2 9
-	#define RING_PIN_3 10
-	#define RING_PIN_4 11
-	#define RING_PIN_5 12
+	#define RING_PIN_1 46
+	#define RING_PIN_2 49
+	#define RING_PIN_3 48
+	#define RING_PIN_4 51
+	#define RING_PIN_5 53
 
-	#define BUTTON_PIN_1 27 // 2
-	#define BUTTON_PIN_2 28 // 3
-	#define BUTTON_PIN_3 29 // 4
-	#define BUTTON_PIN_4 30 // 5
-	#define BUTTON_PIN_5 31 // 6
-	#define BUTTON_PIN_6 32 // 7
-	#define BUTTON_PIN_7 33 // 10
-	#define BUTTON_PIN_8 34 // 11
-	#define BUTTON_PIN_9 35 // 12
-	#define BUTTON_PIN_10 36 // 13
-	#define BUTTON_PIN_11 37
-	#define ANALOG_PIN_1 A0
-	#define ANALOG_PIN_2 A1
+	#define BUTTON_PIN_1 0 // 2
+	#define BUTTON_PIN_2 4 // 3
+	#define BUTTON_PIN_3 8 // 4
+	#define BUTTON_PIN_4 12 // 5
+	#define BUTTON_PIN_5 17 // 6
+	#define BUTTON_PIN_6 25 // 7
+	#define BUTTON_PIN_7 29 // 10
+	#define BUTTON_PIN_8 33 // 11
+	#define BUTTON_PIN_9 37 // 12
+	#define BUTTON_PIN_10 41 // 13
+	#define BUTTON_PIN_11 45
+	#define ANALOG_PIN_1 A4
+	#define ANALOG_PIN_2 A0
 
 	#define PATTERN_PIN BUTTON_PIN_1
 	#define PAUSE_PIN BUTTON_PIN_2
@@ -431,7 +431,7 @@ namespace Meltdown
 
 	void executeLoop()
 	{
-		//checkButtonStates();
+		checkButtonStates();
 
 		checkModifiers();
 
