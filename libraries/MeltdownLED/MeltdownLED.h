@@ -103,6 +103,7 @@ namespace Meltdown
 
 		// HUE //
 
+		/// Toggles the given Hue value. Since there can be a number of individual hue buttons, we toggle them individually.
 		bool ToggleHue(int index)
 		{
 			bool hueVal = false;
@@ -111,23 +112,30 @@ namespace Meltdown
 			case 1:
 				gHue1 = !gHue1;
 				hueVal = gHue1;
+				break;
 			case 2:
 				gHue2 = !gHue2;
 				hueVal = gHue2;
+				break;
 			case 3:
 				gHue3 = !gHue3;
 				hueVal = gHue3;
+				break;
 			case 4:
 				gHue4 = !gHue4;
 				hueVal = gHue4;
+				break;
 			case 5:
 				gHue5 = !gHue5;
 				hueVal = gHue5;
+				break;
 			}
 			SetHue();
 
 			return hueVal;
 		}
+
+		/// Count and return the number of currently toggled hue values;
 		int GetToggledHueCount()
 		{
 			int val = 0;
@@ -139,6 +147,26 @@ namespace Meltdown
 
 			return val;
 		}
+
+		/// Return an arbitrary RGB color for a given number of toggled hue buttons. 
+		/// This will be to add color to CRGBs, since they cannot have hue applied to them.
+		CRGB GetRgbFromHue()
+		{
+			switch (GetToggledHueCount())
+			{
+			case 1:
+				return CRGB::Red;
+			case 2:
+				return CRGB::Green;
+			case 3:
+				return CRGB::Blue;
+			case 4:
+				return CRGB::Purple;
+			default:
+				return CRGB::Black;
+			}
+		}
+
 		void SetHue()
 		{
 			gHue = map(GetToggledHueCount(), 0, 6, 0, 255);
@@ -317,6 +345,25 @@ namespace Meltdown
 			}
 		}
 
+		void BlendAll(CRGB *ledSet[], int numLeds, CRGB color)
+		{
+			for (int i = 0; i < numLeds; i++)
+			{
+				CRGB led = *ledSet[i];
+				if (led)
+				{
+					nblend(*ledSet[i], color, 127);
+				}
+			}
+		}
+
+		void BlendFromHue(CRGB *ledSet[], int numLeds)
+		{
+			if (GetToggledHueCount() == 0) return;
+
+			BlendAll(ledSet, numLeds, GetRgbFromHue());
+		}
+
 		/// Generate random colors (withing a confinement of hue) in random locations.
 		void SetRandomColor(CRGB *ledSet[], int numLeds, int numPositions, int hueOffset = 0)
 		{
@@ -345,7 +392,12 @@ namespace Meltdown
 			}
 		}
 
-		CRGBPalette16 GetPalette(int index)
+		CRGBPalette16 GetPalette(bool adjustHue = false)
+		{
+			return GetPalette(gCurrentModeNumber, adjustHue);
+		}
+
+		CRGBPalette16 GetPalette(int index, bool adjustHue = false)
 		{
 			CRGBPalette16 palettes[5] = {
 				PartyColors_p,
@@ -355,9 +407,12 @@ namespace Meltdown
 				RainbowColors_p
 			};
 
-			int adjustedIndex = (index + GetToggledHueCount()) % ARRAY_SIZE(palettes);
+			if (adjustHue)
+			{
+				index += GetToggledHueCount();
+			}
 
-			return palettes[adjustedIndex];
+			return palettes[index % ARRAY_SIZE(palettes)];
 		}
 
 		CRGB ColorGradientFromPalette(CRGBPalette16 palette, int numLeds, int pos, bool isReverse = false)
@@ -422,12 +477,12 @@ namespace Meltdown
 
 		void FillColor(CRGB *ledSet[], int numLeds, int modeOffset = 0)
 		{
-			short red = 255;
-			short green = 0;
-			short blue = 255;
-			CRGB color = CRGB(red, green, blue);
+			for (int i = 0; i < numLeds; i++)
+			{
+				*ledSet[i] = ColorGradientFromPalette(GetPalette(), numLeds, i);
+			}
 
-			SetAllColor(ledSet, numLeds, color);
+			BlendFromHue(ledSet, numLeds);
 		}
 
 		void Rainbow(CRGB *ledSet[], int numLeds, int modeOffset = 0)
@@ -511,6 +566,8 @@ namespace Meltdown
 			{
 				*ledSet[i] = ColorFromPalette(GetPalette(gCurrentModeNumber), i * multiplier, beat - (i * 10));
 			}
+
+			BlendFromHue(ledSet, numLeds);
 		}
 
 		void Juggle(CRGB *ledSet[], int numLeds, int modeOffset = 0)
@@ -608,7 +665,10 @@ namespace Meltdown
 			{
 				if ((frame - i < numLeds) && (frame - i >= 0))
 				{
-					*ledSet[frame - i] = ColorGradientFromPalette(GetPalette(3), meteorSize, i, true);
+					// Set the colors of the meteor using a reversed HeatColors gradient, so the meteor's tail is white hot trailing off to red.
+					*ledSet[frame - i] = ColorGradientFromPalette(HeatColors_p, meteorSize, i, true);
+					// Apply a blend from the hue, if toggled. We'll be using a designated arbitrary RGB color.
+					nblend(*ledSet[frame - i], GetRgbFromHue(), 127);
 				}
 			}
 
