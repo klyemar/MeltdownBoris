@@ -129,6 +129,7 @@ namespace Meltdown
 		const String ANALOG_PATTERN = "ANPT";
 		const String ANALOG_EFFECT = "ANEF";
 		const String PAUSE = "PAUS";
+		const String CAN_SLEEP = "BSLP";
 		const String SLEEP = "SLEP";
 
 		String PrepareBoolCommand(String command, bool value) { return PrepareCommand(command, value ? 1 : 0); }

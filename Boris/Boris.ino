@@ -23,7 +23,7 @@ namespace Meltdown
 #define NUM_STRIPS_PER_PENT 1
 
 #define NUM_WHEEL_LEDS_PER_STRIP 160 //18
-#define NUM_SPOKE_LEDS_PER_STRIP 130 //18
+#define NUM_SPOKE_LEDS_PER_STRIP 140 //18
 #define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
 #define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
@@ -135,6 +135,10 @@ namespace Meltdown
 					{
 						MeltdownLogger.Debug(Serial, "Setting Analog Pattern", patternVal);
 					}
+				}
+				else if (command.equals(MeltdownSerial.CAN_SLEEP))
+				{
+					MeltdownLED.SetCanSleep();
 				}
 				else if (command.equals(MeltdownSerial.SLEEP))
 				{
@@ -267,7 +271,7 @@ void loop()
 	Meltdown::executeLoop();
 }
 
-void serialEvent()
+void serialEvent1()
 {
 	Meltdown::executeSerialEvent();
 }

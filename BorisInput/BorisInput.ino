@@ -270,6 +270,8 @@ namespace Meltdown
 
 	void trySleep()
 	{
+		if (!MeltdownLED.GetCanSleep()) return;
+
 		// Check if sleep mode has been enabled. If so, send the serial command.
 		if (MeltdownLED.CheckSleepTimer())
 		{
@@ -280,11 +282,6 @@ namespace Meltdown
 
 	void tryWakeUp()
 	{
-		if (MeltdownLED.GetSleeping())
-		{
-			MeltdownLogger.Debug(Serial, "Waking Up...");
-			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.SLEEP, false);
-		}
 		MeltdownLED.SetSleeping(false);
 	}
 
@@ -312,10 +309,10 @@ namespace Meltdown
 			if (!MeltdownLED.GetSleeping())
 			{
 				button->callback();
+
+				button->previousState = LOW;
 			}
 			tryWakeUp();
-
-			button->previousState = LOW;
 		}
 		// Check if the button is pressed. If it is, the buttonState is HIGH.
 		else if (button->state == HIGH && button->previousState == LOW)
@@ -326,10 +323,9 @@ namespace Meltdown
 				{
 					button->callback();
 				}
+				button->previousState = HIGH;
 			}
 			tryWakeUp();
-
-			button->previousState = HIGH;
 		}
 	}
 
