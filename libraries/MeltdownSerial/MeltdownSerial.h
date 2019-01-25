@@ -123,6 +123,7 @@ namespace Meltdown
 		const String HUE3 = "HUE3";
 		const String HUE4 = "HUE4";
 		const String HUE5 = "HUE5";
+		const String FULL_BRIGHT = "FLBR";
 		const String TOP = "TOPP";
 		const String BOTTOM = "BOTP";
 		const String BOTH = "BOTH";

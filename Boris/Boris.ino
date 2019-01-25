@@ -20,10 +20,10 @@ namespace Meltdown
 #define LED_TYPE OCTOWS2811
 
 #define NUM_PENTS 1
-#define NUM_STRIPS_PER_PENT 1
+#define NUM_STRIPS_PER_PENT 5
 
-#define NUM_WHEEL_LEDS_PER_STRIP 160 //18
-#define NUM_SPOKE_LEDS_PER_STRIP 140 //18
+#define NUM_WHEEL_LEDS_PER_STRIP 60 //160
+#define NUM_SPOKE_LEDS_PER_STRIP 69 //140
 #define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
 #define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
@@ -87,6 +87,10 @@ namespace Meltdown
 				else if (command.equals(MeltdownSerial.PAUSE))
 				{
 					MeltdownLED.SetPause();
+				}
+				else if (command.equals(MeltdownSerial.FULL_BRIGHT))
+				{
+					MeltdownLED.SetFullBright();
 				}
 				else if (command.equals(MeltdownSerial.PATTERN))
 				{
@@ -231,6 +235,12 @@ namespace Meltdown
 					MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
 					MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
 					MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
+				}
+
+				if (MeltdownLED.GetFullBright())
+				{
+					MeltdownLED.MaximizeBrightness(ledWheelSets, NUM_WHEEL_LEDS);
+					MeltdownLED.MaximizeBrightness(ledSpokeSets, NUM_SPOKE_LEDS);
 				}
 			}
 		}

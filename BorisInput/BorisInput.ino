@@ -40,6 +40,7 @@ namespace Meltdown
 	#define HUE2_PIN BUTTON_PIN_5
 	#define HUE3_PIN BUTTON_PIN_9
 	#define HUE4_PIN BUTTON_PIN_10
+	#define FULL_BRIGHT_PIN BUTTON_PIN_11
 	#define EFFECT_PIN BUTTON_PIN_6
 	#define BOTTOM_PIN BUTTON_PIN_7
 	#define TOP_PIN BUTTON_PIN_8
@@ -88,6 +89,7 @@ namespace Meltdown
 	Button hue2Button = { HUE2_PIN };
 	Button hue3Button = { HUE3_PIN };
 	Button hue4Button = { HUE4_PIN };
+	Button fullBrightButton = { FULL_BRIGHT_PIN };
 	Button pauseButton = { PAUSE_PIN };
 
 #pragma region PATTERNS
@@ -268,6 +270,14 @@ namespace Meltdown
 		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.PAUSE, pauseVal);
 	}
 
+	void toggleFullBright()
+	{
+		bool fullBrightVal = MeltdownLED.ToggleFullBright();
+
+		MeltdownLogger.Debug(Serial, "Setting Full Bright", fullBrightVal);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_BRIGHT, fullBrightVal);
+	}
+
 	void trySleep()
 	{
 		if (!MeltdownLED.GetCanSleep()) return;
@@ -343,6 +353,7 @@ namespace Meltdown
 			checkButtonState(&hue2Button);
 			checkButtonState(&hue3Button);
 			checkButtonState(&hue4Button);
+			checkButtonState(&fullBrightButton);
 		}
 	}
 
@@ -363,6 +374,7 @@ namespace Meltdown
 
 		topButton.callback = setTopPosition;
 		bottomButton.callback = setBottomPosition;
+		fullBrightButton.callback = toggleFullBright;
 		hue3Button.callback = toggleHue3;
 		hue4Button.callback = toggleHue4;
 		pauseButton.callback = togglePause;
@@ -460,6 +472,13 @@ namespace Meltdown
 
 			setColor(effectRing, NUM_LEDS_PER_MED_RING, CRGB::Black);
 			MeltdownLED.ExecuteEffect(effectRing, NUM_LEDS_PER_MED_RING, 1);
+
+			if (MeltdownLED.GetFullBright())
+			{
+				MeltdownLED.MaximizeBrightness(patternRing, NUM_LEDS_PER_LARGE_RING);
+				MeltdownLED.MaximizeBrightness(effectValRing, NUM_LEDS_PER_LARGE_RING);
+				MeltdownLED.MaximizeBrightness(modeRing, NUM_LEDS_PER_MED_RING);
+			}
 
 			trySleep();
 		}
