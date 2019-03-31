@@ -19,7 +19,7 @@ namespace Meltdown
 
 #define LED_TYPE OCTOWS2811
 
-#define NUM_PENTS 1
+#define NUM_PENTS 5
 #define NUM_STRIPS_PER_PENT 5
 
 #define NUM_WHEEL_LEDS_PER_STRIP 60 //160
