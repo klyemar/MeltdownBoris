@@ -23,7 +23,7 @@ namespace Meltdown
 #define NUM_STRIPS_PER_PENT 5
 
 #define NUM_WHEEL_LEDS_PER_STRIP 60 //160
-#define NUM_SPOKE_LEDS_PER_STRIP 69 //140
+#define NUM_SPOKE_LEDS_PER_STRIP 40 //140
 #define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
 #define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
@@ -97,8 +97,9 @@ namespace Meltdown
 					// Set to black.
 					MeltdownLED.SetAllColor(ledWheelSets, NUM_WHEEL_LEDS, CRGB::Black);
 					MeltdownLED.SetAllColor(ledSpokeSets, NUM_SPOKE_LEDS, CRGB::Black);
-					MeltdownLED.NextPattern();
-					MeltdownLogger.Debug(Serial, "Next Pattern");
+
+					int patternNumber = MeltdownLED.SetPatternNumber();
+					MeltdownLogger.Debug(Serial, "Setting pattern number", patternNumber);
 				}
 				else if (command.equals(MeltdownSerial.TOP))
 				{
@@ -112,13 +113,13 @@ namespace Meltdown
 				}
 				else if (command.equals(MeltdownSerial.EFFECT))
 				{
-					MeltdownLED.NextEffect();
-					MeltdownLogger.Debug(Serial, "Next Effect");
+					int effectNumber = MeltdownLED.SetEffectNumber();
+					MeltdownLogger.Debug(Serial, "Setting effect number", effectNumber);
 				}
 				else if (command.equals(MeltdownSerial.MODE))
 				{
-					int modeNumber = MeltdownLED.NextMode();
-					MeltdownLogger.Debug(Serial, "Next Mode", modeNumber);
+					int modeNumber = MeltdownLED.SetModeNumber();
+					MeltdownLogger.Debug(Serial, "Setting mode number", modeNumber);
 				}
 				else if (command.equals(MeltdownSerial.ANALOG_EFFECT))
 				{
@@ -140,13 +141,30 @@ namespace Meltdown
 						MeltdownLogger.Debug(Serial, "Setting Analog Pattern", patternVal);
 					}
 				}
-				else if (command.equals(MeltdownSerial.CAN_SLEEP))
+				else if (command.equals(MeltdownSerial.AUTO_NONE))
 				{
-					MeltdownLED.SetCanSleep();
+					MeltdownLED.SetAutoMode(MeltdownLED.None);
+					MeltdownLogger.Debug(Serial, "Disabling Auto Mode.");
 				}
-				else if (command.equals(MeltdownSerial.SLEEP))
+				else if (command.equals(MeltdownSerial.AUTO_PATTERN))
 				{
-					MeltdownLED.SetSleeping();
+					MeltdownLED.SetAutoMode(MeltdownLED.Pattern);
+					MeltdownLogger.Debug(Serial, "Setting Auto Pattern Mode.");
+				}
+				else if (command.equals(MeltdownSerial.AUTO_MODE))
+				{
+					MeltdownLED.SetAutoMode(MeltdownLED.Mode);
+					MeltdownLogger.Debug(Serial, "Setting Auto Mode Mode.");
+				}
+				else if (command.equals(MeltdownSerial.AUTO_PATTERN_MODE))
+				{
+					MeltdownLED.SetAutoMode(MeltdownLED.PatternMode);
+					MeltdownLogger.Debug(Serial, "Setting Auto Pattern Mode Mode.");
+				}
+				else if (command.equals(MeltdownSerial.AUTO_SLEEP))
+				{
+					MeltdownLED.SetAutoMode(MeltdownLED.Sleep);
+					MeltdownLogger.Debug(Serial, "Setting Auto Sleep Mode.");
 				}
 				else
 				{
@@ -173,20 +191,25 @@ namespace Meltdown
 				for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
 				{
 #if DEBUG
-					Serial.print("ledWheelSets["); Serial.print((i * NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
+					//Serial.print("ledWheelSets["); Serial.print((i * NUM_WHEEL_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k);
 #endif
-					ledWheelSets[(i * NUM_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
+					ledWheelSets[(i * NUM_WHEEL_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k];
 				}
 
 				for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
 				{
 #if DEBUG
-					Serial.print("ledSpokeSets["); Serial.print((i * NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k);
+					//Serial.print("ledSpokeSets["); Serial.print((i * NUM_SPOKE_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k); Serial.print("]: "); Serial.println((i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k);
 #endif
-					ledSpokeSets[(i * NUM_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k];
+					ledSpokeSets[(i * NUM_SPOKE_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k] = &leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k];
 				}
 			}
 		}
+
+		Serial.println("Finished setting up LEDs.");
+		MeltdownLogger.Debug(Serial, "Number of Wheel LEDs", NUM_WHEEL_LEDS);
+		MeltdownLogger.Debug(Serial, "Number of Spoke LEDs", NUM_SPOKE_LEDS);
+		MeltdownLogger.Debug(Serial, "Number of total LEDs", NUM_LEDS);
 	}
 
 	void executeSetup()
@@ -199,54 +222,48 @@ namespace Meltdown
 		MeltdownLogger.InitSerial(DEBUG);
 
 		delay(3000);
+
 		LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_PENT);
 
-		LEDS.setBrightness(MeltdownLED.GetBrightness());
-
 		setupLedArrays();
+
+		LEDS.setBrightness(MeltdownLED.GetBrightness());
 	}
 
 	void executeLoop()
 	{
 		tryExecuteCommand();
 
-		if (!MeltdownLED.GetSleeping())
+		if (!MeltdownLED.GetPause())
 		{
-			if (!MeltdownLED.GetPause())
+			if (MeltdownLED.GetTop())
 			{
-				if (MeltdownLED.GetTop())
-				{
-					// Call the current pattern function once, updating the 'leds' array.
-					MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
-					MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
-					MeltdownLED.SetAllColor(ledSpokeSets, NUM_SPOKE_LEDS, CRGB::Black);
-				}
-				else if (MeltdownLED.GetBottom())
-				{
-					// Call the current pattern function once, updating the 'leds' array.
-					MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
-					MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
-					MeltdownLED.SetAllColor(ledWheelSets, NUM_WHEEL_LEDS, CRGB::Black);
-				}
-				else
-				{
-					// Call the current pattern function once, updating the 'leds' array.
-					MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
-					MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
-					MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
-					MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
-				}
-
-				if (MeltdownLED.GetFullBright())
-				{
-					MeltdownLED.MaximizeBrightness(ledWheelSets, NUM_WHEEL_LEDS);
-					MeltdownLED.MaximizeBrightness(ledSpokeSets, NUM_SPOKE_LEDS);
-				}
+				// Call the current pattern function once, updating the 'leds' array.
+				MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
+				MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
+				MeltdownLED.SetAllColor(ledSpokeSets, NUM_SPOKE_LEDS, CRGB::Black);
 			}
-		}
-		else
-		{
-			executeSleepPattern();
+			else if (MeltdownLED.GetBottom())
+			{
+				// Call the current pattern function once, updating the 'leds' array.
+				MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
+				MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
+				MeltdownLED.SetAllColor(ledWheelSets, NUM_WHEEL_LEDS, CRGB::Black);
+			}
+			else
+			{
+				// Call the current pattern function once, updating the 'leds' array.
+				MeltdownLED.ExecutePattern(ledWheelSets, NUM_WHEEL_LEDS);
+				MeltdownLED.ExecutePattern(ledSpokeSets, NUM_SPOKE_LEDS);
+				MeltdownLED.ExecuteEffect(ledWheelSets, NUM_WHEEL_LEDS);
+				MeltdownLED.ExecuteEffect(ledSpokeSets, NUM_SPOKE_LEDS);
+			}
+
+			if (MeltdownLED.GetFullBright())
+			{
+				MeltdownLED.MaximizeBrightness(ledWheelSets, NUM_WHEEL_LEDS);
+				MeltdownLED.MaximizeBrightness(ledSpokeSets, NUM_SPOKE_LEDS);
+			}
 		}
 
 		LEDS.show();

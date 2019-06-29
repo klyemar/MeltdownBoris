@@ -11,45 +11,51 @@
 
 namespace Meltdown
 {
-	#define DEBUG true
+#define DEBUG true
 
-	#define RING_PIN_1 46
-	#define RING_PIN_2 49
-	#define RING_PIN_3 48
-	#define RING_PIN_4 51
-	#define RING_PIN_5 53
+#define RING_PIN_1 46
+#define RING_PIN_2 49
+#define RING_PIN_3 48
+#define RING_PIN_4 51
+#define RING_PIN_5 53
 
-	#define BUTTON_PIN_1 0 // 2
-	#define BUTTON_PIN_2 4 // 3
-	#define BUTTON_PIN_3 8 // 4
-	#define BUTTON_PIN_4 12 // 5
-	#define BUTTON_PIN_5 17 // 6
-	#define BUTTON_PIN_6 25 // 7
-	#define BUTTON_PIN_7 29 // 10
-	#define BUTTON_PIN_8 33 // 11
-	#define BUTTON_PIN_9 37 // 12
-	#define BUTTON_PIN_10 41 // 13
-	#define BUTTON_PIN_11 45
-	#define ANALOG_PIN_1 A4
-	#define ANALOG_PIN_2 A0
+#define BUTTON_PIN_1 0 // 1
+#define BUTTON_PIN_2 4 // 2
+#define BUTTON_PIN_3 8 // 3
+#define BUTTON_PIN_4 12 // 4
+#define BUTTON_PIN_5 17 // 5
+#define BUTTON_PIN_6 25 // 6
+#define BUTTON_PIN_7 29 // 8
+#define BUTTON_PIN_8 33 // 7
+#define BUTTON_PIN_9 37 // 9
+#define BUTTON_PIN_10 41 // 10
+#define BUTTON_PIN_11 45
+#define ANALOG_PIN_1 A4
+#define ANALOG_PIN_2 A0
 
-	#define PATTERN_PIN BUTTON_PIN_1
-	#define PAUSE_PIN BUTTON_PIN_2
-	#define MODE_PIN BUTTON_PIN_3
-	#define HUE1_PIN BUTTON_PIN_4
-	#define HUE2_PIN BUTTON_PIN_5
-	#define HUE3_PIN BUTTON_PIN_9
-	#define HUE4_PIN BUTTON_PIN_10
-	#define FULL_BRIGHT_PIN BUTTON_PIN_11
-	#define EFFECT_PIN BUTTON_PIN_6
-	#define BOTTOM_PIN BUTTON_PIN_7
-	#define TOP_PIN BUTTON_PIN_8
-	#define ANALOG_PATTERN_PIN ANALOG_PIN_1
-	#define ANALOG_EFFECT_PIN ANALOG_PIN_2
-	#define PARTIAL_RING_PIN ANALOG_PIN_2
+#define PATTERN_PIN BUTTON_PIN_1
+#define PAUSE_PIN BUTTON_PIN_2
+#define MODE_PIN BUTTON_PIN_3
+#define HUE1_PIN BUTTON_PIN_4
+#define HUE2_PIN BUTTON_PIN_5
+#define HUE3_PIN BUTTON_PIN_9
+#define HUE4_PIN BUTTON_PIN_10
+#define FULL_BRIGHT_PIN BUTTON_PIN_11
+#define EFFECT_PIN BUTTON_PIN_6
+#define BOTTOM_PIN BUTTON_PIN_7
+#define TOP_PIN BUTTON_PIN_8
+#define ANALOG_PATTERN_PIN ANALOG_PIN_1
+#define ANALOG_EFFECT_PIN ANALOG_PIN_2
+#define PARTIAL_RING_PIN ANALOG_PIN_2
 
-	#define NUM_LEDS_PER_MED_RING 16
-	#define NUM_LEDS_PER_LARGE_RING 24
+#define CODE_INIT_PIN PAUSE_PIN
+#define CODE_PIN_1 HUE3_PIN
+#define CODE_PIN_2 HUE4_PIN
+#define CODE_PIN_3 HUE2_PIN
+#define CODE_PIN_4 HUE1_PIN
+
+#define NUM_LEDS_PER_MED_RING 16
+#define NUM_LEDS_PER_LARGE_RING 24
 
 	CRGB ringLeds1[NUM_LEDS_PER_LARGE_RING];
 	CRGB ringLeds2[NUM_LEDS_PER_LARGE_RING];
@@ -64,6 +70,10 @@ namespace Meltdown
 	CRGB *effectRing[NUM_LEDS_PER_MED_RING];
 
 	int gRingHue = 0;
+
+	const int gButtonCodeLength = 5;
+	int gButtonCode[gButtonCodeLength] = { 0, 0, 0, 0, 0 };
+
 
 	// Ring options.
 	enum RingPosition { Top, Bottom, Full, Empty, Partial };
@@ -154,7 +164,7 @@ namespace Meltdown
 		}
 	}
 
-	void executeSleepPattern()
+	void executeAutoPattern()
 	{
 		static int hue = 0;
 
@@ -167,33 +177,180 @@ namespace Meltdown
 		}
 	}
 
+	void initPattern()
+	{
+		int patternNumber = MeltdownLED.SetPatternNumber(0);
+
+		MeltdownLogger.Debug(Serial, "Initializing Pattern...");
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.PATTERN, patternNumber);
+	}
+
+	void initEffect()
+	{
+		int effectNumber = MeltdownLED.SetEffectNumber(0);
+
+		MeltdownLogger.Debug(Serial, "Initializing Effect...");
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.EFFECT, effectNumber);
+	}
+
+	void initMode()
+	{
+		int modeNumber = MeltdownLED.SetModeNumber(0);
+
+		MeltdownLogger.Debug(Serial, "Initializing Mode...");
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.MODE, modeNumber);
+	}
+
 	void nextPattern()
 	{
+		// Reset the mode.
+		initMode();
+
 		// Set to black.
 		MeltdownLED.SetAllColor(patternRing, NUM_LEDS_PER_LARGE_RING, CRGB::Black);
-		MeltdownLED.NextPattern();
+		int patternNumber = MeltdownLED.IncrementPatternNumber();
 
 		MeltdownLogger.Debug(Serial, "Next Pattern...");
-		MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.PATTERN, true);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.PATTERN, patternNumber);
 	}
 
 	void nextEffect()
 	{
-		MeltdownLED.NextEffect();
+		int effectNumber = MeltdownLED.IncrementEffectNumber();
 
 		MeltdownLogger.Debug(Serial, "Next Effect...");
-		MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.EFFECT, true);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.EFFECT, effectNumber);
 	}
 
 	void nextMode()
 	{
-		int modeNumber = MeltdownLED.NextMode();
+		int modeNumber = MeltdownLED.IncrementModeNumber();
 
 		MeltdownLogger.Debug(Serial, "Next Mode", modeNumber);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.MODE, true);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.MODE, modeNumber);
+	}
+
+	void executeAutoMode()
+	{
+		if (!MeltdownLED.GetAutoModeActive()) return;
+
+		if (MeltdownLED.IsAutoPattern())
+		{
+			EVERY_N_SECONDS(120)
+			{
+				nextPattern();
+			}
+		}
+		else if (MeltdownLED.IsAutoMode())
+		{
+			EVERY_N_SECONDS(30)
+			{
+				nextMode();
+			}
+		}
+		else if (MeltdownLED.IsAutoPatternMode())
+		{
+			EVERY_N_SECONDS(15)
+			{
+				// If we've reached the limit of modes for this pattern, get the next pattern.
+				if (MeltdownLED.GetModeNumber() >= MeltdownLED.GetNumModes())
+				{
+					nextPattern();
+					MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1, -1);
+				}
+				else
+				{
+					nextMode();
+				}
+			}
+		}
+
+		executeAutoPattern();
 	}
 
 #pragma endregion PATTERNS
+
+#pragma region BUTTON CODE
+
+	int gAutoPatternCode[5] = { CODE_PIN_1, CODE_PIN_1, CODE_PIN_1, CODE_PIN_1, CODE_PIN_1 }; // 9, 9, 9, 9, 9
+	int gAutoModeCode[5] = { CODE_PIN_2, CODE_PIN_2, CODE_PIN_2, CODE_PIN_2, CODE_PIN_2 }; // 10, 10, 10, 10, 10
+	int gAutoPatternModeCode[5] = { CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3 }; // 5, 5, 5, 5, 5
+	int gAutoSleepCode[5] = { CODE_PIN_4, CODE_PIN_4, CODE_PIN_4, CODE_PIN_4, CODE_PIN_4 }; // 4, 4, 4, 4, 4
+
+	void recordButtonPress(int buttonPin)
+	{
+		// Insert the button pin to the first position and shift each portion of the code.
+		gButtonCode[4] = gButtonCode[3];
+		gButtonCode[3] = gButtonCode[2];
+		gButtonCode[2] = gButtonCode[1];
+		gButtonCode[1] = gButtonCode[0];
+		gButtonCode[0] = buttonPin;
+	}
+
+	bool buttonCodeMatches(int code[])
+	{
+		// Check each portion of the code, if it doesn't match the desired code return false.
+		for (int i = 0; i < gButtonCodeLength; i++)
+		{
+			if (code[i] != gButtonCode[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	void resetButtonCode()
+	{
+		// Replace code with all zeros.
+		for (int i = 0; i < gButtonCodeLength; i++)
+		{
+			gButtonCode[i] = 0;
+		}
+	}
+
+	void readButtonCode()
+	{
+		if (buttonCodeMatches(gAutoPatternCode))
+		{
+			MeltdownLogger.Debug(Serial, "Enabling Auto Pattern Mode...");
+
+			MeltdownLED.SetAutoMode(MeltdownLED.Pattern);
+			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_PATTERN, 1);
+
+			resetButtonCode();
+		}
+		else if (buttonCodeMatches(gAutoModeCode))
+		{
+			MeltdownLogger.Debug(Serial, "Enabling Auto Mode Mode...");
+
+			MeltdownLED.SetAutoMode(MeltdownLED.Mode);
+			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_MODE, 1);
+
+			resetButtonCode();
+		}
+		else if (buttonCodeMatches(gAutoPatternModeCode))
+		{
+			MeltdownLogger.Debug(Serial, "Enabling Auto Pattern Mode Mode...");
+
+			MeltdownLED.SetAutoMode(MeltdownLED.PatternMode);
+			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_PATTERN_MODE, 1);
+
+			resetButtonCode();
+		}
+		else if (buttonCodeMatches(gAutoSleepCode))
+		{
+			MeltdownLogger.Debug(Serial, "Enabling Auto Sleep Mode...");
+
+			MeltdownLED.SetAutoMode(MeltdownLED.Sleep);
+			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_SLEEP, 1);
+
+			resetButtonCode();
+		}
+	}
+
+#pragma endregion BUTTON CODE
 
 #pragma region SET MODIFIERS
 
@@ -278,21 +435,22 @@ namespace Meltdown
 		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_BRIGHT, fullBrightVal);
 	}
 
-	void trySleep()
+	void tryAutoMode()
 	{
-		if (!MeltdownLED.GetCanSleep()) return;
+		if (!MeltdownLED.GetAutoModeEnabled()) return;
 
 		// Check if sleep mode has been enabled. If so, send the serial command.
-		if (MeltdownLED.CheckSleepTimer())
+		if (MeltdownLED.CheckAutoTimer())
 		{
-			MeltdownLogger.Debug(Serial, "Entering Sleep Mode...");
-			MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.SLEEP, true);
+			MeltdownLogger.Debug(Serial, "Activating Auto Mode...");
+			MeltdownSerial.SendBoolCommand(Serial, Serial1, MeltdownSerial.ACTIVATE_AUTO, true);
 		}
 	}
 
-	void tryWakeUp()
+	void disableAutoMode()
 	{
-		MeltdownLED.SetSleeping(false);
+		MeltdownLogger.Debug(Serial, "Deactivating Auto Mode...");
+		MeltdownLED.SetAutoMode(MeltdownLED.None);
 	}
 
 	void checkModifiers()
@@ -308,34 +466,89 @@ namespace Meltdown
 
 #pragma region INPUTS
 
+	bool isCodeButtonPressed()
+	{
+		return digitalRead(CODE_INIT_PIN) == LOW;
+	}
+
 	void checkButtonState(Button *button)
 	{
 		// Read the state of the button pin.
 		button->state = digitalRead(button->pin);
 
-		// Check if the button is depressed. If it is, the buttonState is LOW.
+		// Check if the button is pressed. If it is, the buttonState is LOW.
 		if (button->state == LOW && button->previousState == HIGH)
 		{
-			if (!MeltdownLED.GetSleeping())
+			// Are we holding down the code button?
+			if (isCodeButtonPressed())
 			{
-				button->callback();
+				// If we're pressing another button other than the code button, record the button press and read the code.
+				if (button->pin != CODE_INIT_PIN)
+				{
+					Serial.println(button->pin);
 
-				button->previousState = LOW;
+					recordButtonPress(button->pin);
+
+					readButtonCode();
+				}
+				else
+				{
+					// This is awkward, but for now if this is the first that the code button has been pressed, we must activate it here.
+					if (!MeltdownLED.GetAutoModeActive())
+					{
+						button->callback();
+					}
+					else
+					{
+						disableAutoMode();
+					}
+				}
 			}
-			tryWakeUp();
-		}
-		// Check if the button is pressed. If it is, the buttonState is HIGH.
-		else if (button->state == HIGH && button->previousState == LOW)
-		{
-			if (!MeltdownLED.GetSleeping())
+			else
 			{
-				if (!button->isToggle)
+				// If auto mode is not active, call the button callback. Otherwise, deactivate auto mode.
+				if (!MeltdownLED.GetAutoModeActive())
 				{
 					button->callback();
 				}
-				button->previousState = HIGH;
+				else
+				{
+					disableAutoMode();
+				}
 			}
-			tryWakeUp();
+
+			button->previousState = LOW;
+		}
+		// Check if the button is depressed. If it is, the buttonState is HIGH.
+		else if (button->state == HIGH && button->previousState == LOW)
+		{
+			if (!isCodeButtonPressed())
+			{
+				// Are we depressing the code button?
+				if (button->pin == CODE_INIT_PIN)
+				{
+					resetButtonCode();
+
+					button->callback();
+				}
+				else
+				{
+					// If auto mode is not active, call the button callback. Otherwise, deactivate auto mode.
+					if (!MeltdownLED.GetAutoModeActive())
+					{
+						if (!button->isToggle)
+						{
+							button->callback();
+						}
+					}
+					else
+					{
+						disableAutoMode();
+					}
+				}
+			}
+
+			button->previousState = HIGH;
 		}
 	}
 
@@ -435,6 +648,10 @@ namespace Meltdown
 		pinMode(BUTTON_PIN_11, INPUT_PULLUP);
 		pinMode(ANALOG_PIN_1, INPUT);
 		pinMode(ANALOG_PIN_2, INPUT);
+
+		initPattern();
+		initMode();
+		initEffect();
 	}
 
 	void executeLoop()
@@ -443,11 +660,15 @@ namespace Meltdown
 
 		checkModifiers();
 
-		if (!MeltdownLED.GetSleeping())
+		if (MeltdownLED.GetAutoModeActive())
+		{
+			executeAutoMode();
+		}
+		else
 		{
 			if (!MeltdownLED.GetPause())
 			{
-				MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1);
+				MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1, -1);
 				MeltdownLED.ExecuteEffect(patternRing, NUM_LEDS_PER_LARGE_RING);
 
 				MeltdownLED.ExecutePattern(modeRing, NUM_LEDS_PER_MED_RING, 0, 1);
@@ -480,11 +701,7 @@ namespace Meltdown
 				MeltdownLED.MaximizeBrightness(modeRing, NUM_LEDS_PER_MED_RING);
 			}
 
-			trySleep();
-		}
-		else
-		{
-			executeSleepPattern();
+			tryAutoMode();
 		}
 
 		LEDS.delay(1000 / MeltdownLED.GetFps());
