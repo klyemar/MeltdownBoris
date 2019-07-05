@@ -57,23 +57,19 @@ namespace Meltdown
 #define NUM_LEDS_PER_MED_RING 16
 #define NUM_LEDS_PER_LARGE_RING 24
 
-	CRGB ringLeds1[NUM_LEDS_PER_LARGE_RING];
-	CRGB ringLeds2[NUM_LEDS_PER_LARGE_RING];
-	CRGB ringLeds3[NUM_LEDS_PER_LARGE_RING];
-	CRGB ringLeds4[NUM_LEDS_PER_MED_RING];
-	CRGB ringLeds5[NUM_LEDS_PER_MED_RING];
+	CRGB patternRingLeds[NUM_LEDS_PER_LARGE_RING];
+	CRGB effectValRingLeds[NUM_LEDS_PER_LARGE_RING];
+	CRGB positionRingLeds[NUM_LEDS_PER_LARGE_RING];
+	CRGB modeRingLeds[NUM_LEDS_PER_MED_RING];
+	CRGB effectRingLeds[NUM_LEDS_PER_MED_RING];
 
-	CRGB *patternRing[NUM_LEDS_PER_LARGE_RING];
-	CRGB *effectValRing[NUM_LEDS_PER_LARGE_RING];
-	CRGB *positionRing[NUM_LEDS_PER_LARGE_RING];
-	CRGB *modeRing[NUM_LEDS_PER_MED_RING];
-	CRGB *effectRing[NUM_LEDS_PER_MED_RING];
+	uint16_t medRingIndexes[NUM_LEDS_PER_MED_RING];
+	uint16_t largeRingIndexes[NUM_LEDS_PER_LARGE_RING];
 
 	int gRingHue = 0;
 
 	const int gButtonCodeLength = 5;
 	int gButtonCode[gButtonCodeLength] = { 0, 0, 0, 0, 0 };
-
 
 	// Ring options.
 	enum RingPosition { Top, Bottom, Full, Empty, Partial };
@@ -104,21 +100,21 @@ namespace Meltdown
 
 #pragma region PATTERNS
 
-	void setColor(CRGB *ledSets[], int numLeds, CRGB::HTMLColorCode color)
+	void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
 	{
 		for (int i = 0; i < numLeds; i++)
 		{
-			*ledSets[i] = color;
+			ledSets[i] = color;
 		}
 	}
 
 	void setAllColor(CRGB::HTMLColorCode color)
 	{
-		setColor(patternRing, NUM_LEDS_PER_LARGE_RING, color);
-		setColor(effectValRing, NUM_LEDS_PER_LARGE_RING, color);
-		setColor(positionRing, NUM_LEDS_PER_LARGE_RING, color);
-		setColor(modeRing, NUM_LEDS_PER_MED_RING, color);
-		setColor(effectRing, NUM_LEDS_PER_MED_RING, color);
+		setColor(patternRingLeds, NUM_LEDS_PER_LARGE_RING, color);
+		setColor(effectValRingLeds, NUM_LEDS_PER_LARGE_RING, color);
+		setColor(positionRingLeds, NUM_LEDS_PER_LARGE_RING, color);
+		setColor(modeRingLeds, NUM_LEDS_PER_MED_RING, color);
+		setColor(effectRingLeds, NUM_LEDS_PER_MED_RING, color);
 	}
 
 	int getRingLedCount(int numLeds)
@@ -151,7 +147,7 @@ namespace Meltdown
 		return false;
 	}
 
-	void setRingColor(CRGB *ringLeds[], int numLeds, RingPosition position, int hueOffset)
+	void setRingColor(CRGB ringLeds[], int numLeds, RingPosition position, int hueOffset)
 	{
 		setColor(ringLeds, numLeds, CRGB::Black);
 
@@ -159,7 +155,7 @@ namespace Meltdown
 		{
 			if (canColorRingLed(i + 1, numLeds, position))
 			{
-				*ringLeds[i] = CHSV(gRingHue + hueOffset, 255, 192);
+				ringLeds[i] = CHSV(gRingHue + hueOffset, 255, 192);
 			}
 		}
 	}
@@ -169,7 +165,7 @@ namespace Meltdown
 		static int hue = 0;
 
 		setAllColor(CRGB::Black);
-		setRingColor(patternRing, NUM_LEDS_PER_LARGE_RING, Full, hue);
+		setRingColor(patternRingLeds, NUM_LEDS_PER_LARGE_RING, Full, hue);
 
 		EVERY_N_MILLIS(50)
 		{
@@ -207,7 +203,7 @@ namespace Meltdown
 		initMode();
 
 		// Set to black.
-		MeltdownLED.SetAllColor(patternRing, NUM_LEDS_PER_LARGE_RING, CRGB::Black);
+		MeltdownLED.SetAllColor(patternRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING, CRGB::Black);
 		int patternNumber = MeltdownLED.IncrementPatternNumber();
 
 		MeltdownLogger.Debug(Serial, "Next Pattern...");
@@ -252,14 +248,19 @@ namespace Meltdown
 		{
 			EVERY_N_SECONDS(15)
 			{
+				Serial.print("Mode Number: ");
+				Serial.println(MeltdownLED.GetModeNumber());
+				Serial.print("Num Modes: ");
+				Serial.println(MeltdownLED.GetNumModes());
 				// If we've reached the limit of modes for this pattern, get the next pattern.
 				if (MeltdownLED.GetModeNumber() >= MeltdownLED.GetNumModes())
 				{
+					Serial.println("Auto changing pattern...");
 					nextPattern();
-					MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1, -1);
 				}
 				else
 				{
+					Serial.println("Auto changing mode...");
 					nextMode();
 				}
 			}
@@ -272,9 +273,9 @@ namespace Meltdown
 
 #pragma region BUTTON CODE
 
-	int gAutoPatternCode[5] = { CODE_PIN_1, CODE_PIN_1, CODE_PIN_1, CODE_PIN_1, CODE_PIN_1 }; // 9, 9, 9, 9, 9
+	int gAutoPatternModeCode[5] = { CODE_PIN_1, CODE_PIN_1, CODE_PIN_1, CODE_PIN_1, CODE_PIN_1 }; // 9, 9, 9, 9, 9
 	int gAutoModeCode[5] = { CODE_PIN_2, CODE_PIN_2, CODE_PIN_2, CODE_PIN_2, CODE_PIN_2 }; // 10, 10, 10, 10, 10
-	int gAutoPatternModeCode[5] = { CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3 }; // 5, 5, 5, 5, 5
+	int gAutoPatternCode[5] = { CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3 }; // 5, 5, 5, 5, 5
 	int gAutoSleepCode[5] = { CODE_PIN_4, CODE_PIN_4, CODE_PIN_4, CODE_PIN_4, CODE_PIN_4 }; // 4, 4, 4, 4, 4
 
 	void recordButtonPress(int buttonPin)
@@ -593,19 +594,19 @@ namespace Meltdown
 		pauseButton.callback = togglePause;
 	}
 
-	void setupLedArrays()
+	void setupLedIndexes()
 	{
+		// Now, this function might *seem* useless, and that's because it is. We need to provide an array of indexes to the library that is shared
+		// with the primary Boris code. That code actually uses some fairly complex index arrangements, this code doesn't.
+
 		for (int i = 0; i < NUM_LEDS_PER_LARGE_RING; i++)
 		{
-			patternRing[i] = &ringLeds1[i];
-			effectValRing[i] = &ringLeds2[i];
-			positionRing[i] = &ringLeds3[i];
+			largeRingIndexes[i] = i;
 		}
 
 		for (int i = 0; i < NUM_LEDS_PER_MED_RING; i++)
 		{
-			modeRing[i] = &ringLeds4[i];
-			effectRing[i] = &ringLeds5[i];
+			medRingIndexes[i] = i;
 		}
 	}
 
@@ -623,17 +624,17 @@ namespace Meltdown
 
 		delay(3000);
 
-		FastLED.addLeds<WS2812, RING_PIN_1, GRB>(ringLeds1, NUM_LEDS_PER_LARGE_RING);
-		FastLED.addLeds<WS2812, RING_PIN_2, GRB>(ringLeds2, NUM_LEDS_PER_LARGE_RING);
-		FastLED.addLeds<WS2812, RING_PIN_3, GRB>(ringLeds3, NUM_LEDS_PER_LARGE_RING);
-		FastLED.addLeds<WS2812, RING_PIN_4, GRB>(ringLeds4, NUM_LEDS_PER_MED_RING);
-		FastLED.addLeds<WS2812, RING_PIN_5, GRB>(ringLeds5, NUM_LEDS_PER_MED_RING);
+		FastLED.addLeds<WS2812, RING_PIN_1, GRB>(patternRingLeds, NUM_LEDS_PER_LARGE_RING);
+		FastLED.addLeds<WS2812, RING_PIN_2, GRB>(effectValRingLeds, NUM_LEDS_PER_LARGE_RING);
+		FastLED.addLeds<WS2812, RING_PIN_3, GRB>(positionRingLeds, NUM_LEDS_PER_LARGE_RING);
+		FastLED.addLeds<WS2812, RING_PIN_4, GRB>(modeRingLeds, NUM_LEDS_PER_MED_RING);
+		FastLED.addLeds<WS2812, RING_PIN_5, GRB>(effectRingLeds, NUM_LEDS_PER_MED_RING);
 
 		LEDS.setBrightness(MeltdownLED.GetBrightness());
 
 		setupButtons();
 
-		setupLedArrays();
+		setupLedIndexes();
 
 		pinMode(BUTTON_PIN_1, INPUT_PULLUP);
 		pinMode(BUTTON_PIN_2, INPUT_PULLUP);
@@ -668,37 +669,37 @@ namespace Meltdown
 		{
 			if (!MeltdownLED.GetPause())
 			{
-				MeltdownLED.ExecutePattern(patternRing, NUM_LEDS_PER_LARGE_RING, 1, -1);
-				MeltdownLED.ExecuteEffect(patternRing, NUM_LEDS_PER_LARGE_RING);
+				MeltdownLED.ExecutePattern(patternRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING, 1, -1);
+				MeltdownLED.ExecuteEffect(patternRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
 
-				MeltdownLED.ExecutePattern(modeRing, NUM_LEDS_PER_MED_RING, 0, 1);
-				MeltdownLED.ExecuteEffect(modeRing, NUM_LEDS_PER_MED_RING);
+				MeltdownLED.ExecutePattern(modeRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING, 0, 1);
+				MeltdownLED.ExecuteEffect(modeRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING);
 			}
 
 			if (MeltdownLED.GetTop())
 			{
-				setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Top, 64);
+				setRingColor(positionRingLeds, NUM_LEDS_PER_LARGE_RING, Top, 64);
 			}
 			else if (MeltdownLED.GetBottom())
 			{
-				setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Bottom, 128);
+				setRingColor(positionRingLeds, NUM_LEDS_PER_LARGE_RING, Bottom, 128);
 			}
 			else
 			{
-				setRingColor(positionRing, NUM_LEDS_PER_LARGE_RING, Full, 192);
+				setRingColor(positionRingLeds, NUM_LEDS_PER_LARGE_RING, Full, 192);
 			}
 
-			setRingColor(effectValRing, NUM_LEDS_PER_LARGE_RING, Partial, 0);
-			MeltdownLED.ExecuteEffect(effectValRing, NUM_LEDS_PER_LARGE_RING);
+			setRingColor(effectValRingLeds, NUM_LEDS_PER_LARGE_RING, Partial, 0);
+			MeltdownLED.ExecuteEffect(effectValRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
 
-			setColor(effectRing, NUM_LEDS_PER_MED_RING, CRGB::Black);
-			MeltdownLED.ExecuteEffect(effectRing, NUM_LEDS_PER_MED_RING, 1);
+			setColor(effectRingLeds, NUM_LEDS_PER_MED_RING, CRGB::Black);
+			MeltdownLED.ExecuteEffect(effectRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING, 1);
 
 			if (MeltdownLED.GetFullBright())
 			{
-				MeltdownLED.MaximizeBrightness(patternRing, NUM_LEDS_PER_LARGE_RING);
-				MeltdownLED.MaximizeBrightness(effectValRing, NUM_LEDS_PER_LARGE_RING);
-				MeltdownLED.MaximizeBrightness(modeRing, NUM_LEDS_PER_MED_RING);
+				MeltdownLED.MaximizeBrightness(patternRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
+				MeltdownLED.MaximizeBrightness(effectValRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
+				MeltdownLED.MaximizeBrightness(modeRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING);
 			}
 
 			tryAutoMode();

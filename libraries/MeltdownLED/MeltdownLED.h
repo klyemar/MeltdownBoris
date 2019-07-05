@@ -19,15 +19,15 @@ namespace Meltdown
 			int gCurrentEffectNumber = 0;
 			int gCurrentModeNumber = 0;
 
-			unsigned int gNumModes = 0;
-			unsigned int gBrightness = 48;
-			unsigned int gHue = 0;
-			unsigned int gFps = 500;
-			unsigned long gAnalogPattern = 0;
-			unsigned long gAnalogEffect = 0;
-			unsigned long gPos = 0;
-			unsigned long gFade = 20;
-			unsigned long gFrame = 0;
+			int gNumModes = 0;
+			int gBrightness = 48;
+			int gHue = 0;
+			int gFps = 500;
+			long gAnalogPattern = 0;
+			long gAnalogEffect = 0;
+			long gPos = 0;
+			long gFade = 20;
+			long gFrame = 0;
 			bool gHue1 = false;
 			bool gHue2 = false;
 			bool gHue3 = false;
@@ -42,7 +42,6 @@ namespace Meltdown
 			bool gAutoModeActive = false;
 
 			enum AutoMode { None, Sleep, Pattern, Mode, PatternMode };
-
 			AutoMode gAutoMode = None;
 
 			unsigned long gCurrentMillis;
@@ -52,7 +51,7 @@ namespace Meltdown
 			const unsigned long gAutoModePeriod = 1000L * 60 * 30; // 30 minutes
 
 			// List of patterns to cycle through.  Each is defined as a separate function below.
-			typedef void (CMeltdownLED::*SimplePatternList)(CRGB*[], int, int);
+			typedef void (CMeltdownLED::*SimplePatternList)(CRGB[], uint16_t[], int, int);
 			SimplePatternList gPatterns[8] = {
 				&CMeltdownLED::BlendColor,
 				&CMeltdownLED::RunningLights,
@@ -65,7 +64,7 @@ namespace Meltdown
 			};
 
 			// List of modes to cycle through.  Each is defined as a separate function below.
-			typedef void (CMeltdownLED::*ModeList)(CRGB*[], int);
+			typedef void (CMeltdownLED::*ModeList)(CRGB[], uint16_t[], int);
 			ModeList gEffects[2] = {
 				&CMeltdownLED::NullEffect,
 				&CMeltdownLED::GlitterEffect
@@ -336,20 +335,20 @@ namespace Meltdown
 				return SetEffectNumber(gCurrentEffectNumber + 1); 
 			}
 
-			void ExecuteEffect(CRGB *ledSet[], int numLeds, int offset = 0) { (this->*(gEffects[GetEffectNumber(offset)]))(ledSet, numLeds); }
+			void ExecuteEffect(CRGB leds[], uint16_t indexes[], int numLeds, int offset = 0) { (this->*(gEffects[GetEffectNumber(offset)]))(leds, indexes, numLeds); }
 
-			void NullEffect(CRGB *ledSet[], int numLeds) { }
+			void NullEffect(CRGB leds[], uint16_t indexes[], int numLeds) { }
 
-			void GlitterEffect(CRGB *ledSet[], int numLeds)
+			void GlitterEffect(CRGB leds[], uint16_t indexes[], int numLeds)
 			{
 				int chanceOfGlitter = GetAnalogEffect(15, 115);
 				if (random8() < chanceOfGlitter)
 				{
-					SetRandomColor(ledSet, numLeds, 3, CRGB::White);
+					SetRandomColor(leds, indexes, numLeds, 3, CRGB::White);
 				}
 			}
 
-			void HueIncrementEffect(CRGB *ledSet[], int numLeds)
+			void HueIncrementEffect(CRGB leds[], uint16_t indexes[], int numLeds)
 			{
 				static int hue = 0;
 
@@ -358,7 +357,7 @@ namespace Meltdown
 				{
 					for (int i = 0; i < numLeds; i++)
 					{
-						// *ledSet[i]
+						// leds[indexes[i]]
 					}
 				}
 			}
@@ -368,6 +367,12 @@ namespace Meltdown
 #pragma region MODES
 
 			int GetNumModes() { return gNumModes; }
+
+			int SetNumModes(int number)
+			{
+				gNumModes = number;
+				return gNumModes;
+			}
 
 			int GetModeNumber() { return gCurrentModeNumber; }
 
@@ -393,19 +398,19 @@ namespace Meltdown
 
 			int IncrementModeNumber() { return SetModeNumber(gCurrentModeNumber + 1); }
 
-			void Invert(CRGB *ledSet[], int numLeds)
+			void Invert(CRGB leds[], uint16_t indexes[], int numLeds)
 			{
 				for (int i = 0; i < numLeds; i++)
 				{
-					*ledSet[i] = -*ledSet[i];
+					leds[indexes[i]] = -leds[indexes[i]];
 				}
 			}
 
-			void MaximizeBrightness(CRGB *ledSet[], int numLeds)
+			void MaximizeBrightness(CRGB leds[], uint16_t indexes[], int numLeds)
 			{
 				for (int i = 0; i < numLeds; i++)
 				{
-					(*ledSet[i]).maximizeBrightness();
+					(leds[indexes[i]]).maximizeBrightness();
 				}
 			}
 
@@ -443,66 +448,115 @@ namespace Meltdown
 
 #pragma region UTILITY
 
-			void SetAllColor(CRGB *ledSet[], int numLeds, CRGB::HTMLColorCode color)
+			void SetAllColor(CRGB leds[], uint16_t indexes[], int numLeds, CRGB::HTMLColorCode color)
 			{
 				for (int i = 0; i < numLeds; i++)
 				{
-					*ledSet[i] = color;
+					leds[indexes[i]] = color;
+				}
+			}
+			
+			void FillGradientRgb(CRGB leds[], uint16_t indexes[], int numLeds,
+				uint16_t startpos, CRGB startcolor,
+				uint16_t endpos, CRGB endcolor)
+			{
+				// if the points are in the wrong order, straighten them
+				if (endpos < startpos) 
+				{
+					uint16_t t = endpos;
+					CRGB tc = endcolor;
+					endcolor = startcolor;
+					endpos = startpos;
+					startpos = t;
+					startcolor = tc;
+				}
+
+				saccum87 rdistance87;
+				saccum87 gdistance87;
+				saccum87 bdistance87;
+
+				rdistance87 = (endcolor.r - startcolor.r) << 7;
+				gdistance87 = (endcolor.g - startcolor.g) << 7;
+				bdistance87 = (endcolor.b - startcolor.b) << 7;
+
+				uint16_t pixeldistance = endpos - startpos;
+				int16_t divisor = pixeldistance ? pixeldistance : 1;
+
+				saccum87 rdelta87 = rdistance87 / divisor;
+				saccum87 gdelta87 = gdistance87 / divisor;
+				saccum87 bdelta87 = bdistance87 / divisor;
+
+				rdelta87 *= 2;
+				gdelta87 *= 2;
+				bdelta87 *= 2;
+
+				accum88 r88 = startcolor.r << 8;
+				accum88 g88 = startcolor.g << 8;
+				accum88 b88 = startcolor.b << 8;
+				for (uint16_t i = startpos; i <= endpos; i++) 
+				{
+					leds[indexes[i]] = CRGB(r88 >> 8, g88 >> 8, b88 >> 8);
+					r88 += rdelta87;
+					g88 += gdelta87;
+					b88 += bdelta87;
 				}
 			}
 
-			void SetAllColor(CRGB *ledSet[], int numLeds, CRGB color)
+			void SetAllColor(CRGB leds[], uint16_t indexes[], int numLeds, CRGB color)
 			{
 				for (int i = 0; i < numLeds; i++)
 				{
-					*ledSet[i] = color;
+					leds[indexes[i]] = color;
 				}
 			}
 
-			void BlendAll(CRGB *ledSet[], int numLeds, CRGB color, byte amount = 127)
+			void BlendAll(CRGB leds[], uint16_t indexes[], int numLeds, CRGB color, byte amount = 127)
 			{
 				for (int i = 0; i < numLeds; i++)
 				{
-					CRGB led = *ledSet[i];
+					CRGB led = leds[indexes[i]];
 					if (led)
 					{
-						nblend(*ledSet[i], color, amount);
+						nblend(leds[indexes[i]], color, amount);
 					}
 				}
 			}
 
-			void BlendFromHue(CRGB *ledSet[], int numLeds, byte amount = 127)
+			void BlendFromHue(CRGB leds[], uint16_t indexes[], int numLeds, byte amount = 127)
 			{
 				if (GetToggledHueCount() == 0) return;
 
-				BlendAll(ledSet, numLeds, GetRgbFromHue(), amount);
+				BlendAll(leds, indexes, numLeds, GetRgbFromHue(), amount);
 			}
 
 			/// Generate random colors (withing a confinement of hue) in random locations.
-			void SetRandomColor(CRGB *ledSet[], int numLeds, int numPositions, int hueOffset = 0)
+			void SetRandomColor(CRGB leds[], uint16_t indexes[], int numLeds, int numPositions, int hueOffset = 0)
 			{
 				for (int i = 0; i < numPositions; i++)
 				{
-					*ledSet[random16(numLeds)] = CHSV(gHue + random8(hueOffset), 200, 255);
+					uint16_t index = indexes[random16(numLeds)];
+					leds[index] = CHSV(gHue + random8(hueOffset), 200, 255);
 				}
 			}
 
 			/// Add a specific color in random locations.
-			void SetRandomColor(CRGB *ledSet[], int numLeds, int numPositions, CRGB::HTMLColorCode color)
+			void SetRandomColor(CRGB leds[], uint16_t indexes[], int numLeds, int numPositions, CRGB::HTMLColorCode color)
 			{
 				for (int i = 0; i < numPositions; i++)
 				{
-					*ledSet[random16(numLeds)] = color;
+					uint16_t index = indexes[random16(numLeds)];
+					leds[index] = color;
 				}
 			}
 
-			void GenerateSinelons(CRGB *ledSet[], int numLeds, int numSinelons, int pos)
+			void GenerateSinelons(CRGB leds[], uint16_t indexes[], int numLeds, int numSinelons, int pos)
 			{
 				for (int i = 0; i < numSinelons; i++)
 				{
 					int hue = gHue + (int)((255 / numSinelons) * i);
 
-					*ledSet[(pos + (int)(numLeds / numSinelons) * (i + 1)) % numLeds] = CHSV(hue, 255, 192);
+					uint16_t index = indexes[(pos + (int)(numLeds / numSinelons) * (i + 1)) % numLeds];
+					leds[index] = CHSV(hue, 255, 192);
 				}
 			}
 
@@ -570,16 +624,16 @@ namespace Meltdown
 				}
 			}
 
-			void FadeSetsToBlackBy(CRGB *ledSet[], int numLeds, int fade)
+			void FadeSetsToBlackBy(CRGB leds[], uint16_t indexes[], int numLeds, int fade)
 			{
 				for (int i = 0; i < numLeds; i++)
 				{
 					int scale = 255 - fade;
-					(*ledSet[i]).nscale8(scale);
+					(leds[indexes[i]]).nscale8(scale);
 				}
 			}
 
-			void FillRainbow(CRGB *ledSet[], int numLeds, int initialHue, int deltaHue)
+			void FillRainbow(CRGB leds[], uint16_t indexes[], int numLeds, int initialHue, int deltaHue)
 			{
 				CHSV hsv;
 				hsv.hue = initialHue;
@@ -587,7 +641,7 @@ namespace Meltdown
 				hsv.sat = 240;
 				for (int i = 0; i < numLeds; i++)
 				{
-					*ledSet[i] = hsv;
+					leds[indexes[i]] = hsv;
 					hsv.hue += deltaHue;
 				}
 			}
@@ -625,23 +679,35 @@ namespace Meltdown
 				return SetPatternNumber(gCurrentPatternNumber + 1);
 			}
 
-			void ExecutePattern(CRGB *ledSet[], int numLeds, int patternOffset = 0, int modeOffset = 0)
+			void ExecutePattern(CRGB leds[], uint16_t indexes[], int numLeds, int patternOffset = 0, int modeOffset = 0)
 			{
-				(this->*(gPatterns[GetPatternNumber(patternOffset)]))(ledSet, numLeds, modeOffset);
+				(this->*(gPatterns[GetPatternNumber(patternOffset)]))(leds, indexes, numLeds, modeOffset);
 
 				IncrementFrame();
 			}
 
-			void BlendColor(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void BlendColor(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				int speed = beatsin8(GetAnalogPattern(16, 48), 0, 255);
 
 				// Modes
-				gNumModes = 4;
-				FillGradients(ledSet, numLeds, GetModeNumber(modeOffset) + 1, speed);
+				SetNumModes(4);
+				FillGradients(leds, indexes, numLeds, GetModeNumber(modeOffset) + 1, speed);
 			}
 
-			void FillGradients(CRGB *ledSet[], int numLeds, int numGradients, int speed)
+			CRGB* GetLeds(CRGB leds[], uint16_t indexes[], int numLeds)
+			{
+				static CRGB* arrangedLeds = new CRGB[numLeds];
+
+				for (int i = 0; i < numLeds; i++)
+				{
+					arrangedLeds[i] = leds[i];
+				}
+
+				return arrangedLeds;
+			}
+
+			void FillGradients(CRGB leds[], uint16_t indexes[], int numLeds, int numGradients, int speed)
 			{
 				if (numGradients < 1) numGradients = 1;
 
@@ -657,118 +723,121 @@ namespace Meltdown
 
 					int startPos = numLeds / numGradients * i;
 					int endPos = (numLeds / numGradients * (i + 1)) - 1;
-					fill_gradient_RGB(*ledSet, startPos, blend1, endPos, blend2);
+
+					FillGradientRgb(leds, indexes, numLeds, startPos, blend1, endPos, blend2);
 				}
 			}
 
-			void Rainbow(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void Rainbow(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				int deltaHue = GetAnalogPattern(1, 15);
-				FillRainbow(ledSet, numLeds, gHue + gPos, deltaHue);
+				FillRainbow(leds, indexes, numLeds, gHue + gPos, deltaHue);
 
 				// Modes
-				gNumModes = 1;
+				SetNumModes(1);
 				switch (GetModeNumber(modeOffset))
 				{
 				case 1:
 					// Invert rainbox colors.
-					Invert(ledSet, numLeds);
+					Invert(leds, indexes, numLeds);
 					break;
 				}
 			}
 
-			void Confetti(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void Confetti(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				int fade = GetAnalogPattern(2, 30);
-				FadeSetsToBlackBy(ledSet, numLeds, fade);
+				FadeSetsToBlackBy(leds, indexes, numLeds, fade);
 
 				// Modes
-				gNumModes = 5;
+				SetNumModes(5);
 				switch (GetModeNumber(modeOffset))
 				{
 				case 1:
-					SetRandomColor(ledSet, numLeds, 4, 64);		// Orange
-					SetRandomColor(ledSet, numLeds, 4, 0);		// Red
+					SetRandomColor(leds, indexes, numLeds, 4, 64);		// Orange
+					SetRandomColor(leds, indexes, numLeds, 4, 0);		// Red
 					break;
 				case 2:
-					SetRandomColor(ledSet, numLeds, 3, 64);		// Orange	
-					SetRandomColor(ledSet, numLeds, 3, 0);		// Red
-					SetRandomColor(ledSet, numLeds, 6, 128);	// Blue
+					SetRandomColor(leds, indexes, numLeds, 3, 64);		// Orange	
+					SetRandomColor(leds, indexes, numLeds, 3, 0);		// Red
+					SetRandomColor(leds, indexes, numLeds, 6, 128);	// Blue
 					break;
 				case 3:
-					SetRandomColor(ledSet, numLeds, 2, 64);		// Orange
-					SetRandomColor(ledSet, numLeds, 2, 0);		// Red
-					SetRandomColor(ledSet, numLeds, 5, 128);	// Blue
-					SetRandomColor(ledSet, numLeds, 5, 196);	// Purple
+					SetRandomColor(leds, indexes, numLeds, 2, 64);		// Orange
+					SetRandomColor(leds, indexes, numLeds, 2, 0);		// Red
+					SetRandomColor(leds, indexes, numLeds, 5, 128);	// Blue
+					SetRandomColor(leds, indexes, numLeds, 5, 196);	// Purple
 					break;
 				case 4:
-					SetRandomColor(ledSet, numLeds, 4, 128);	// Blue
-					SetRandomColor(ledSet, numLeds, 4, 196);	// Purple
+					SetRandomColor(leds, indexes, numLeds, 4, 128);	// Blue
+					SetRandomColor(leds, indexes, numLeds, 4, 196);	// Purple
 					break;
 				case 5:
-					SetRandomColor(ledSet, numLeds, 6, 196);	// Purple
+					SetRandomColor(leds, indexes, numLeds, 6, 196);	// Purple
 					break;
 				default:
-					SetRandomColor(ledSet, numLeds, 6, 64);		// Orange
+					SetRandomColor(leds, indexes, numLeds, 6, 64);		// Orange
 					break;
 				}
 			}
 
-			void Sinelon(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void Sinelon(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				// Display a dot moving back and forth in a sin wave pattern.
 				int fade = GetAnalogPattern(2, 30);
-				FadeSetsToBlackBy(ledSet, numLeds, fade);
+				FadeSetsToBlackBy(leds, indexes, numLeds, fade);
 
-				int pos = beatsin16(8, 0, numLeds - 1);
-				*ledSet[pos] = CHSV(gHue + 64, 255, 192);
+				uint16_t index = indexes[beatsin16(8, 0, numLeds - 1)];
+				leds[index] = CHSV(gHue + 64, 255, 192);
 
 				// Modes
-				gNumModes = 4;
+				SetNumModes(4);
 				switch (GetModeNumber(modeOffset))
 				{
 				case 1:
 				{
 					// Add a second, opposite dot moving in the opposite direction.
-					int opppositePos = (numLeds - 1) - (beatsin16(8, 0, numLeds - 1));
-					*ledSet[opppositePos] = CHSV(gHue + 128, 255, 192);
+					uint16_t oppositeIndex = indexes[(numLeds - 1) - (beatsin16(8, 0, numLeds - 1))];
+					leds[oppositeIndex] = CHSV(gHue + 128, 255, 192);
 					break;
 				}
 				case 2:
-					GenerateSinelons(ledSet, numLeds, 2, pos);
+					GenerateSinelons(leds, indexes, numLeds, 2, index);
 					break;
 				case 3:
-					GenerateSinelons(ledSet, numLeds, 3, pos);
+					GenerateSinelons(leds, indexes, numLeds, 3, index);
 					break;
 				case 4:
-					GenerateSinelons(ledSet, numLeds, 5, pos);
+					GenerateSinelons(leds, indexes, numLeds, 5, index);
 					break;
 				}
 			}
 
-			void Bpm(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void Bpm(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
+				SetNumModes(4);
+
 				int bpm = 60;
 				int beat = beatsin8(bpm, 63, 255);
 				int multiplier = GetAnalogPattern(2, 12);
 				for (int i = 0; i < numLeds; i++)
 				{
-					*ledSet[i] = ColorFromPalette(GetPalette(gCurrentModeNumber), i * multiplier, beat - (i * 10));
+					leds[indexes[i]] = ColorFromPalette(GetPalette(GetModeNumber(modeOffset)), i * multiplier, beat - (i * 10));
 				}
 
-				BlendFromHue(ledSet, numLeds);
+				BlendFromHue(leds, indexes, numLeds);
 			}
 
-			void Juggle(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void Juggle(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				int fade = GetAnalogPattern(3, 100);
 				// Eight colored dots, weaving in and out of sync with each other.
-				FadeSetsToBlackBy(ledSet, numLeds, fade);
+				FadeSetsToBlackBy(leds, indexes, numLeds, fade);
 
 				int numBalls = 3;
 
 				// Modes
-				gNumModes = 3;
+				SetNumModes(3);
 				switch (GetModeNumber(modeOffset))
 				{
 				case 1:
@@ -785,20 +854,19 @@ namespace Meltdown
 				for (int i = 0; i < numBalls; i++)
 				{
 					int dotHue = i * (255 / numBalls);
-					int pos = beatsin16(i + 7, 0, numLeds - 1);
-
-					*ledSet[pos] = CHSV(dotHue + gHue, 200, 255);
+					uint16_t index = indexes[beatsin16(i + 7, 0, numLeds - 1)];
+					leds[index] = CHSV(dotHue + gHue, 200, 255);
 				}
 			}
 
-			void Sunrise(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void Sunrise(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				static const uint8_t sunriseMinutes = 8;
 
 				static uint8_t heatIndex = 0;
 				CRGB color = ColorFromPalette(HeatColors_p, (heatIndex % 255));
 
-				SetAllColor(ledSet, numLeds, color);
+				SetAllColor(leds, indexes, numLeds, color);
 
 				static const uint8_t interval = (sunriseMinutes * 60) / 256;
 				EVERY_N_SECONDS(interval) {
@@ -806,7 +874,7 @@ namespace Meltdown
 				}
 			}
 
-			void MeteorRain(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void MeteorRain(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				const boolean meteorRandomDecay = true;
 
@@ -816,7 +884,7 @@ namespace Meltdown
 				int frameMultiplier = 2;
 
 				// Modes
-				gNumModes = 2;
+				SetNumModes(2);
 				switch (GetModeNumber(modeOffset))
 				{
 					// Small meteors.
@@ -844,7 +912,7 @@ namespace Meltdown
 					{
 						int meteorTrailDecay = GetAnalogPattern(32, 96);
 
-						(*ledSet[i]).fadeToBlackBy(meteorTrailDecay);
+						(leds[indexes[i]]).fadeToBlackBy(meteorTrailDecay);
 					}
 				}
 
@@ -855,11 +923,12 @@ namespace Meltdown
 					if ((frame - i < numLeds) && (frame - i >= 0))
 					{
 						// Set the colors of the meteor using a reversed HeatColors gradient, so the meteor's tail is white hot trailing off to red.
-						*ledSet[frame - i] = ColorGradientFromPalette(HeatColors_p, meteorSize, i, true);
+						uint16_t index = indexes[frame - i];
+						leds[index] = ColorGradientFromPalette(HeatColors_p, meteorSize, i, true);
 						// Apply a blend from the hue, if toggled. We'll be using a designated arbitrary RGB color.
 						if (HasToggledHues())
 						{
-							nblend(*ledSet[frame - i], GetRgbFromHue(), 127);
+							nblend(leds[index], GetRgbFromHue(), 127);
 						}
 					}
 				}
@@ -867,8 +936,10 @@ namespace Meltdown
 				delay(speedDelay);
 			}
 
-			void RunningLights(CRGB *ledSet[], int numLeds, int modeOffset = 0)
+			void RunningLights(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
+				SetNumModes(5);
+
 				byte red = 180;
 				byte green = 180;
 				byte blue = 100;
@@ -883,7 +954,6 @@ namespace Meltdown
 					float blueSin;
 
 					// Modes
-					gNumModes = 5;
 					switch (GetModeNumber(modeOffset))
 					{
 					case 1:
@@ -938,9 +1008,9 @@ namespace Meltdown
 					float greenMult = greenSin > 0 ? (sin8(greenSin) / (float)255) : 0;
 					float blueMult = blueSin > 0 ? (sin8(blueSin) / (float)255) : 0;
 
-					*ledSet[i] = CRGB(red * redMult, green * greenMult, blue * blueMult);
+					leds[indexes[i]] = CRGB(red * redMult, green * greenMult, blue * blueMult);
 
-					BlendFromHue(ledSet, numLeds, 32);
+					BlendFromHue(leds, indexes, numLeds, 32);
 				}
 			}
 
