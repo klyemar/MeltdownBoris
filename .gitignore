@@ -39,9 +39,14 @@
 /.vs
 /ComputerToArduino/ComputerToArduino/obj/
 
+
 *.elf
 *.hex
 *.vmps.*
 .suo
 board.buildinfo
 *_vm
+/libraries/Adafruit_GFX_Library
+/libraries/RGB_matrix_Panel
+/BorisInput/BorisInput.vcxproj
+/Boris/Boris.vcxproj
