@@ -22,8 +22,8 @@ namespace Meltdown
 #define NUM_PENTS 5
 #define NUM_STRIPS_PER_PENT 5
 
-#define NUM_WHEEL_LEDS_PER_STRIP 60
-#define NUM_SPOKE_LEDS_PER_STRIP 69
+#define NUM_WHEEL_LEDS_PER_STRIP 69
+#define NUM_SPOKE_LEDS_PER_STRIP 60
 #define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
 #define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
@@ -120,7 +120,7 @@ namespace Meltdown
 			{
 				for (int k = 0; k <= j; k++)
 				{
-					leds[(j * NUM_LEDS_PER_STRIP) + k] = CRGB::Blue;
+					leds[(i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k] = CRGB::Blue;
 				}
 
 				for (int k = 0; k <= i; k++)
