@@ -50,3 +50,4 @@ board.buildinfo
 /libraries/RGB_matrix_Panel
 /BorisInput/BorisInput.vcxproj
 /Boris/Boris.vcxproj
+/MazeEscape
