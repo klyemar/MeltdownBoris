@@ -1,7 +1,0 @@
-{
-    "sketch": "Boris.ino",
-    "port": "COM15",
-    "board": "arduino:avr:teensy31",
-    "output": "../build",
-    "configuration": "usb=serial,speed=96,opt=o2std,keys=en-us"
-}
