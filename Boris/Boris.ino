@@ -22,28 +22,123 @@ namespace Meltdown
 #define NUM_PENTS 5
 #define NUM_STRIPS_PER_PENT 5
 
-#define NUM_WHEEL_LEDS_PER_STRIP 60 //60
-#define NUM_SPOKE_LEDS_PER_STRIP 69 //69
+#define NUM_WHEEL_LEDS_PER_STRIP 60
+#define NUM_SPOKE_LEDS_PER_STRIP 69
 #define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
 #define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_LEDS_PER_PENT (NUM_LEDS_PER_STRIP * NUM_STRIPS_PER_PENT)
 #define NUM_WHEEL_LEDS (NUM_PENTS * NUM_WHEEL_LEDS_PER_PENT)
 #define NUM_SPOKE_LEDS (NUM_PENTS * NUM_SPOKE_LEDS_PER_PENT)
-#define NUM_PENT_LEDS (NUM_PENTS * NUM_LEDS_PER_PENT)
-#define NUM_LEDS (NUM_PENT_LEDS)
+#define NUM_LEDS (NUM_PENTS * NUM_LEDS_PER_PENT)
 
 	CRGB leds[NUM_LEDS];
+	uint16_t ledIndexes[NUM_LEDS];
 
-	uint16_t ledWheelIndexes[NUM_WHEEL_LEDS];
-	uint16_t ledSpokeIndexes[NUM_SPOKE_LEDS];
+	bool gDuplicatePents = true;
+
+#pragma region INDEX SETUP
+
+	void clearLedIndexes()
+	{
+		for (int i = 0; i < NUM_LEDS; i++)
+		{
+			ledIndexes[i] = 0;
+		}
+	}
+
+	/// Set the indexes for all wheel sections, treating them as one long contiguous strip.
+	void setIndexesForWheels()
+	{
+		clearLedIndexes();
+
+		for (int i = 0; i < NUM_PENTS; i++)
+		{
+			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+			{
+				for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
+				{
+					ledIndexes[(i * NUM_WHEEL_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
+				}
+			}
+		}
+	}
+
+	/// Set the indexes for the wheel section of a single pent.
+	void setIndexesForWheel(int pentNumber)
+	{
+		clearLedIndexes();
+
+		for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+		{
+			for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
+			{
+				ledIndexes[(j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (pentNumber * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
+			}
+		}
+	}
+
+	/// Set the indexes for all spoke sections, treating them as one long contigous strip.
+	void setIndexesForSpokes()
+	{
+		clearLedIndexes();
+
+		for (int i = 0; i < NUM_PENTS; i++)
+		{
+			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+			{
+				for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
+				{
+					ledIndexes[(i * NUM_SPOKE_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k;
+				}
+			}
+		}
+	}
+
+	/// Set the indexes for the spokes of a single pent.
+	void setIndexesForSpokes(int pentNumber)
+	{
+		clearLedIndexes();
+
+		for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+		{
+			for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
+			{
+				ledIndexes[(j * NUM_SPOKE_LEDS_PER_STRIP) + k] = (pentNumber * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k;
+			}
+		}
+	}
+
+
+#pragma endregion INDEX SETUP
+
+	void displayDebugColors()
+	{
+		for (int i = 0; i < NUM_PENTS; i++)
+		{
+			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+			{
+				for (int k = 0; k <= j; k++)
+				{
+					leds[(j * NUM_LEDS_PER_STRIP) + k] = CRGB::Blue;
+				}
+
+				for (int k = 0; k <= i; k++)
+				{
+					leds[(i * NUM_LEDS_PER_PENT) + k] = CRGB::Red;
+				}
+			}
+		}
+	}
 
 #pragma region COMMANDS
 
 	void executeSleepPattern()
 	{
-		MeltdownLED.Sunrise(leds, ledWheelIndexes, NUM_WHEEL_LEDS);
-		MeltdownLED.Sunrise(leds, ledSpokeIndexes, NUM_SPOKE_LEDS);
+		setIndexesForWheels();
+		MeltdownLED.Sunrise(leds, ledIndexes, NUM_WHEEL_LEDS);
+		setIndexesForSpokes();
+		MeltdownLED.Sunrise(leds, ledIndexes, NUM_SPOKE_LEDS);
 	}
 
 	void tryExecuteCommand()
@@ -95,8 +190,10 @@ namespace Meltdown
 				else if (command.equals(MeltdownSerial.PATTERN))
 				{
 					// Set to black.
-					MeltdownLED.SetAllColor(leds, ledWheelIndexes, NUM_WHEEL_LEDS, CRGB::Black);
-					MeltdownLED.SetAllColor(leds, ledSpokeIndexes, NUM_SPOKE_LEDS, CRGB::Black);
+					setIndexesForWheels();
+					MeltdownLED.SetAllColor(leds, ledIndexes, NUM_WHEEL_LEDS, CRGB::Black);
+					setIndexesForSpokes();
+					MeltdownLED.SetAllColor(leds, ledIndexes, NUM_SPOKE_LEDS, CRGB::Black);
 
 					int patternNumber = MeltdownLED.SetPatternNumber();
 					MeltdownLogger.Debug(Serial, F("Setting pattern number"), patternNumber);
@@ -182,25 +279,6 @@ namespace Meltdown
 
 #pragma endregion COMMANDS
 
-	void setupLedArrays()
-	{
-		for (int i = 0; i < NUM_PENTS; i++)
-		{
-			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
-			{
-				for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
-				{
-					ledWheelIndexes[(i * NUM_WHEEL_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
-				}
-
-				for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
-				{
-					ledSpokeIndexes[(i * NUM_SPOKE_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k;
-				}
-			}
-		}
-	}
-
 	void executeSetup()
 	{
 		// initialize serial communication at 9600 bits per second:
@@ -214,9 +292,47 @@ namespace Meltdown
 
 		LEDS.addLeds<OCTOWS2811>(leds, NUM_LEDS_PER_PENT);
 
-		setupLedArrays();
-
 		LEDS.setBrightness(MeltdownLED.GetBrightness());
+	}
+
+	void executeWheels(int numLeds)
+	{
+		if (MeltdownLED.GetBottom())
+		{
+			// Call the current pattern function once, updating the 'leds' array.
+			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Black);
+		}
+		else
+		{
+			// Call the current pattern function once, updating the 'leds' array.
+			MeltdownLED.ExecutePattern(leds, ledIndexes, numLeds);
+			MeltdownLED.ExecuteEffect(leds, ledIndexes, numLeds);
+		}
+
+		/*if (MeltdownLED.GetFullBright())
+		{
+			MeltdownLED.MaximizeBrightness(leds, ledIndexes, numLeds);
+		}*/
+	}
+
+	void executeSpokes(int numLeds)
+	{
+		if (MeltdownLED.GetTop())
+		{
+			// Call the current pattern function once, updating the 'leds' array.
+			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Black);
+		}
+		else
+		{
+			// Call the current pattern function once, updating the 'leds' array.
+			MeltdownLED.ExecutePattern(leds, ledIndexes, numLeds);
+			MeltdownLED.ExecuteEffect(leds, ledIndexes, numLeds);
+		}
+
+		/*if (MeltdownLED.GetFullBright())
+		{
+			MeltdownLED.MaximizeBrightness(leds, ledIndexes, numLeds);
+		}*/
 	}
 
 	void executeLoop()
@@ -225,35 +341,32 @@ namespace Meltdown
 
 		if (!MeltdownLED.GetPause())
 		{
-			if (MeltdownLED.GetTop())
+			if (MeltdownLED.GetFullBright())
 			{
-				// Call the current pattern function once, updating the 'leds' array.
-				MeltdownLED.ExecutePattern(leds, ledWheelIndexes, NUM_WHEEL_LEDS);
-				MeltdownLED.ExecuteEffect(leds, ledWheelIndexes, NUM_WHEEL_LEDS);
-				MeltdownLED.SetAllColor(leds, ledSpokeIndexes, NUM_SPOKE_LEDS, CRGB::Black);
-			}
-			else if (MeltdownLED.GetBottom())
-			{
-				// Call the current pattern function once, updating the 'leds' array.
-				MeltdownLED.ExecutePattern(leds, ledSpokeIndexes, NUM_SPOKE_LEDS);
-				MeltdownLED.ExecuteEffect(leds, ledSpokeIndexes, NUM_SPOKE_LEDS);
-				MeltdownLED.SetAllColor(leds, ledWheelIndexes, NUM_WHEEL_LEDS, CRGB::Black);
+				for (int i = 0; i < NUM_PENTS; i++)
+				{
+					// WHEELS
+					setIndexesForWheel(i);
+					executeWheels(NUM_WHEEL_LEDS_PER_PENT);
+
+					// SPOKES
+					setIndexesForSpokes(i);
+					executeSpokes(NUM_SPOKE_LEDS_PER_PENT);
+				}
 			}
 			else
 			{
-				// Call the current pattern function once, updating the 'leds' array.
-				MeltdownLED.ExecutePattern(leds, ledWheelIndexes, NUM_WHEEL_LEDS);
-				MeltdownLED.ExecutePattern(leds, ledSpokeIndexes, NUM_SPOKE_LEDS);
-				MeltdownLED.ExecuteEffect(leds, ledWheelIndexes, NUM_WHEEL_LEDS);
-				MeltdownLED.ExecuteEffect(leds, ledSpokeIndexes, NUM_SPOKE_LEDS);
-			}
+				// WHEELS
+				setIndexesForWheels();
+				executeWheels(NUM_WHEEL_LEDS);
 
-			if (MeltdownLED.GetFullBright())
-			{
-				MeltdownLED.MaximizeBrightness(leds, ledWheelIndexes, NUM_WHEEL_LEDS);
-				MeltdownLED.MaximizeBrightness(leds, ledSpokeIndexes, NUM_SPOKE_LEDS);
+				// SPOKES
+				setIndexesForSpokes();
+				executeSpokes(NUM_SPOKE_LEDS);
 			}
 		}
+
+		//displayDebugColors();
 
 		LEDS.show();
 	}

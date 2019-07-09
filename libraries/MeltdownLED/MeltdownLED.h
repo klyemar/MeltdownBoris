@@ -695,18 +695,6 @@ namespace Meltdown
 				FillGradients(leds, indexes, numLeds, GetModeNumber(modeOffset) + 1, speed);
 			}
 
-			CRGB* GetLeds(CRGB leds[], uint16_t indexes[], int numLeds)
-			{
-				static CRGB* arrangedLeds = new CRGB[numLeds];
-
-				for (int i = 0; i < numLeds; i++)
-				{
-					arrangedLeds[i] = leds[i];
-				}
-
-				return arrangedLeds;
-			}
-
 			void FillGradients(CRGB leds[], uint16_t indexes[], int numLeds, int numGradients, int speed)
 			{
 				if (numGradients < 1) numGradients = 1;
