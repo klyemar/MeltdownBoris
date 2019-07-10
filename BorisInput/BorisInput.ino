@@ -278,6 +278,12 @@ namespace Meltdown
 	int gAutoPatternCode[5] = { CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3, CODE_PIN_3 }; // 5, 5, 5, 5, 5
 	int gAutoSleepCode[5] = { CODE_PIN_4, CODE_PIN_4, CODE_PIN_4, CODE_PIN_4, CODE_PIN_4 }; // 4, 4, 4, 4, 4
 
+	void disableAutoMode()
+	{
+		MeltdownLogger.Debug(Serial, "Disabling Auto Mode...");
+		MeltdownLED.SetAutoMode(MeltdownLED.None);
+	}
+
 	void recordButtonPress(int buttonPin)
 	{
 		// Insert the button pin to the first position and shift each portion of the code.
@@ -313,39 +319,71 @@ namespace Meltdown
 
 	void readButtonCode()
 	{
+		// Auto Pattern
 		if (buttonCodeMatches(gAutoPatternCode))
 		{
-			MeltdownLogger.Debug(Serial, "Enabling Auto Pattern Mode...");
+			if (!MeltdownLED.IsAutoPattern())
+			{
+				MeltdownLogger.Debug(Serial, "Enabling Auto Pattern Mode...");
 
-			MeltdownLED.SetAutoMode(MeltdownLED.Pattern);
-			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_PATTERN, 1);
+				MeltdownLED.SetAutoMode(MeltdownLED.Pattern);
+				MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_PATTERN, 1);
+			}
+			else
+			{
+				disableAutoMode();
+			}
 
 			resetButtonCode();
 		}
+		// Auto Mode
 		else if (buttonCodeMatches(gAutoModeCode))
 		{
-			MeltdownLogger.Debug(Serial, "Enabling Auto Mode Mode...");
+			if (!MeltdownLED.IsAutoMode())
+			{
+				MeltdownLogger.Debug(Serial, "Enabling Auto Mode Mode...");
 
-			MeltdownLED.SetAutoMode(MeltdownLED.Mode);
-			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_MODE, 1);
+				MeltdownLED.SetAutoMode(MeltdownLED.Mode);
+				MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_MODE, 1);
+			}
+			else
+			{
+				disableAutoMode();
+			}
 
 			resetButtonCode();
 		}
+		// Auto Pattern Mode
 		else if (buttonCodeMatches(gAutoPatternModeCode))
 		{
-			MeltdownLogger.Debug(Serial, "Enabling Auto Pattern Mode Mode...");
+			if (!MeltdownLED.IsAutoPatternMode())
+			{
+				MeltdownLogger.Debug(Serial, "Enabling Auto Pattern Mode Mode...");
 
-			MeltdownLED.SetAutoMode(MeltdownLED.PatternMode);
-			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_PATTERN_MODE, 1);
+				MeltdownLED.SetAutoMode(MeltdownLED.PatternMode);
+				MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_PATTERN_MODE, 1);
+			}
+			else
+			{
+				disableAutoMode();
+			}
 
 			resetButtonCode();
 		}
+		// Auto Sleep
 		else if (buttonCodeMatches(gAutoSleepCode))
 		{
-			MeltdownLogger.Debug(Serial, "Enabling Auto Sleep Mode...");
+			if (!MeltdownLED.IsAutoSleep())
+			{
+				MeltdownLogger.Debug(Serial, "Enabling Auto Sleep Mode...");
 
-			MeltdownLED.SetAutoMode(MeltdownLED.Sleep);
-			MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_SLEEP, 1);
+				MeltdownLED.SetAutoMode(MeltdownLED.Sleep);
+				MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_SLEEP, 1);
+			}
+			else
+			{
+				disableAutoMode();
+			}
 
 			resetButtonCode();
 		}
@@ -448,10 +486,10 @@ namespace Meltdown
 		}
 	}
 
-	void disableAutoMode()
+	void deactivateAutoMode()
 	{
 		MeltdownLogger.Debug(Serial, "Deactivating Auto Mode...");
-		MeltdownLED.SetAutoMode(MeltdownLED.None);
+		MeltdownLED.SetAutoModeActive(false);
 	}
 
 	void checkModifiers()
@@ -501,7 +539,7 @@ namespace Meltdown
 					}
 					else
 					{
-						disableAutoMode();
+						deactivateAutoMode();
 					}
 				}
 			}
@@ -514,7 +552,7 @@ namespace Meltdown
 				}
 				else
 				{
-					disableAutoMode();
+					deactivateAutoMode();
 				}
 			}
 
@@ -544,7 +582,7 @@ namespace Meltdown
 					}
 					else
 					{
-						disableAutoMode();
+						deactivateAutoMode();
 					}
 				}
 			}
