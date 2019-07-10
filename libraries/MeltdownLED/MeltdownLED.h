@@ -22,12 +22,13 @@ namespace Meltdown
 			int gNumModes = 0;
 			int gBrightness = 48;
 			int gHue = 0;
-			int gFps = 500;
+			int gDelay = 0;
 			long gAnalogPattern = 0;
 			long gAnalogEffect = 0;
 			long gPos = 0;
 			long gFade = 20;
-			long gFrame = 0;
+			long gFrame = 1;
+			int gFrameStep = 1;
 			bool gHue1 = false;
 			bool gHue2 = false;
 			bool gHue3 = false;
@@ -103,9 +104,11 @@ namespace Meltdown
 
 			int GetBrightness(int minVal, int maxVal) { return map(gBrightness, 0, 1023, minVal, maxVal); }
 
-			// FPS //
+			// DELAY //
 
-			int GetFps() { return gFps; }
+			int GetDelay() { return gDelay; }
+
+			void ResetDelay() { gDelay = 0; }
 
 			// HUE //
 
@@ -300,13 +303,47 @@ namespace Meltdown
 
 			bool GetBottom() { return gBottom; }
 
-			void ResetFrame() { gFrame = 0; }
+			void ResetFrame() { gFrame = 1; }
 
-			void IncrementFrame() { gFrame++; }
+			void IncrementFrame(float multiplier = 1) 
+			{ 
+				gFrame += (GetFrameStep(multiplier)); 
+			}
 
 			void SetFrame() { gFrame = MeltdownSerial.GetValue(); }
 
+			long GetFrame() 
+			{ 
+				if (gFrame < 1)
+				{
+					gFrame = 1;
+				}
+				return gFrame; 
+			}
+
 			long GetFrame(long maxFrames) { return gFrame % maxFrames; }
+
+			void ResetFrameStep()
+			{
+				SetFrameStep(1);
+			}
+
+			int GetFrameStep(float multiplier = 1) 
+			{ 
+				// A value of less than zero indicates that we don't want to have any kind of modified increase, like in the case
+				// of an especially long string of lights that would otherwise slow some patterns down.
+				if (gFrameStep <= 0) return 1;
+
+				return gFrameStep * multiplier; 
+			}
+
+			int SetFrameStep(int val) 
+			{ 
+				if (val < -1) val = -1;
+				if (val == 0) val = 1;
+
+				gFrameStep = val; 
+			}
 
 #pragma region EFFECTS
 
@@ -341,7 +378,7 @@ namespace Meltdown
 
 			void GlitterEffect(CRGB leds[], uint16_t indexes[], int numLeds)
 			{
-				int chanceOfGlitter = GetAnalogEffect(15, 115);
+				int chanceOfGlitter = GetAnalogEffect(25, 500);
 				if (random8() < chanceOfGlitter)
 				{
 					SetRandomColor(leds, indexes, numLeds, 3, CRGB::White);
@@ -661,6 +698,7 @@ namespace Meltdown
 			int SetPatternNumber(int number)
 			{
 				ResetFrame();
+				ResetDelay();
 
 				gCurrentPatternNumber = number;
 				return gCurrentPatternNumber;
@@ -669,6 +707,7 @@ namespace Meltdown
 			int SetPatternNumber()
 			{
 				ResetFrame();
+				ResetDelay();
 
 				gCurrentPatternNumber = MeltdownSerial.GetValue();
 				return gCurrentPatternNumber;
@@ -682,8 +721,6 @@ namespace Meltdown
 			void ExecutePattern(CRGB leds[], uint16_t indexes[], int numLeds, int patternOffset = 0, int modeOffset = 0)
 			{
 				(this->*(gPatterns[GetPatternNumber(patternOffset)]))(leds, indexes, numLeds, modeOffset);
-
-				IncrementFrame();
 			}
 
 			void BlendColor(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
@@ -864,12 +901,14 @@ namespace Meltdown
 
 			void MeteorRain(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
+				SetFrameStep(-1);
+
 				const boolean meteorRandomDecay = true;
 
 				// Medium meteor.
 				int meteorSize = 25;
-				int speedDelay = 15;
-				int frameMultiplier = 2;
+				int frameMultiplier = 1;
+				gDelay = 15;
 
 				// Modes
 				SetNumModes(2);
@@ -879,16 +918,16 @@ namespace Meltdown
 					case 1:
 					{
 						meteorSize = 5;
-						speedDelay = 7;
-						frameMultiplier = 2.5;
+						frameMultiplier = 1.5;
+						gDelay = 7;
 						break;
 					}
 					// Large meteor.
 					case 2:
 					{
 						meteorSize = 50;
-						speedDelay = 20;
-						frameMultiplier = 2.5;
+						frameMultiplier = 1;
+						gDelay = 20;
 						break;
 					}
 				}
@@ -920,13 +959,12 @@ namespace Meltdown
 						}
 					}
 				}
-
-				delay(speedDelay);
 			}
 
 			void RunningLights(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				SetNumModes(5);
+				SetFrameStep(20);
 
 				byte red = 180;
 				byte green = 180;
@@ -944,52 +982,52 @@ namespace Meltdown
 					// Modes
 					switch (GetModeNumber(modeOffset))
 					{
-					case 1:
-					{
-						redSin = (i * length) + (gFrame / (float)frequency / 1.5);
-						greenSin = (i * length) + (gFrame / (float)frequency);
-						blueSin = (i * length) + (gFrame / (float)frequency / 3);
-						break;
-					}
-					case 2:
-					{
-						redSin = (i * length) + (gFrame / (float)frequency * 1.5);
-						greenSin = (i * length) + (gFrame / (float)frequency * 3);
-						blueSin = (i * length) + (gFrame / (float)frequency / 1.5);
-						break;
-					}
-					case 3:
-					{
-						redSin = (i * length) - (gFrame / (float)frequency);
-						greenSin = (i * length / 2) - (gFrame / (float)frequency);
-						blueSin = (i * length / 2) + (gFrame / (float)frequency);
-						break;
-					}
-					case 4:
-					{
-						redSin = (i * length) + (gFrame / (float)frequency);
-						greenSin = (i * length / 4) - (gFrame / (float)frequency);
-						blueSin = (i * length) + (gFrame / (float)frequency / 2);
-						break;
-					}
-					case 5:
-					{
-						redSin = (i * length) + (gFrame / (float)frequency);
-						greenSin = (i * length / 4) - (gFrame / (float)frequency);
-						blueSin = (i * length / 2) + (gFrame / (float)frequency / 2);
-						break;
-					}
-					default:
-					{
-						red = beatsin8(32, 0, 255, 0, 128);
-						green = beatsin8(16, 0, 255);
-						blue = beatsin8(32, 0, 255);
+						case 1:
+						{
+							redSin = (i * length) + (GetFrame() / (float)frequency / 1.5);
+							greenSin = (i * length) + (GetFrame() / (float)frequency);
+							blueSin = (i * length) + (GetFrame() / (float)frequency / 3);
+							break;
+						}
+						case 2:
+						{
+							redSin = (i * length) + (GetFrame() / (float)frequency * 1.5);
+							greenSin = (i * length) + (GetFrame() / (float)frequency * 3);
+							blueSin = (i * length) + (GetFrame() / (float)frequency / 1.5);
+							break;
+						}
+						case 3:
+						{
+							redSin = (i * length) - (GetFrame() / (float)frequency);
+							greenSin = (i * length / 2) - (GetFrame() / (float)frequency);
+							blueSin = (i * length / 2) + (GetFrame() / (float)frequency);
+							break;
+						}
+						case 4:
+						{
+							redSin = (i * length) + (GetFrame() / (float)frequency);
+							greenSin = (i * length / 4) - (GetFrame() / (float)frequency);
+							blueSin = (i * length) + (GetFrame() / (float)frequency / 2);
+							break;
+						}
+						case 5:
+						{
+							redSin = (i * length) + (GetFrame() / (float)frequency);
+							greenSin = (i * length / 4) - (GetFrame() / (float)frequency);
+							blueSin = (i * length / 2) + (GetFrame() / (float)frequency / 2);
+							break;
+						}
+						default:
+						{
+							red = beatsin8(32, 0, 255, 0, 128);
+							green = beatsin8(16, 0, 255);
+							blue = beatsin8(32, 0, 255);
 
-						redSin = 0; //(i * length) + (gFrame / (float)frequency);
-						greenSin = (i * length) + (gFrame / (float)frequency);
-						blueSin = (i * length) + (gFrame / (float)frequency);
-						break;
-					}
+							redSin = 0; //(i * length) + (gFrame / (float)frequency);
+							greenSin = (i * length) + (GetFrame() / (float)frequency);
+							blueSin = (i * length) + (GetFrame() / (float)frequency);
+							break;
+						}
 					}
 
 					float redMult = redSin > 0 ? (sin8(redSin) / (float)255) : 0;
@@ -998,7 +1036,7 @@ namespace Meltdown
 
 					leds[indexes[i]] = CRGB(red * redMult, green * greenMult, blue * blueMult);
 
-					BlendFromHue(leds, indexes, numLeds, 32);
+					// BlendFromHue(leds, indexes, numLeds, 32);
 				}
 			}
 

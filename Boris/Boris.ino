@@ -353,6 +353,8 @@ namespace Meltdown
 					setIndexesForSpokes(i);
 					executeSpokes(NUM_SPOKE_LEDS_PER_PENT);
 				}
+
+				MeltdownLED.IncrementFrame();
 			}
 			else
 			{
@@ -363,7 +365,14 @@ namespace Meltdown
 				// SPOKES
 				setIndexesForSpokes();
 				executeSpokes(NUM_SPOKE_LEDS);
+
+				MeltdownLED.IncrementFrame(1.5f);
 			}
+		}
+
+		if (MeltdownLED.GetDelay() > 0)
+		{
+			delay(MeltdownLED.GetDelay());
 		}
 
 		//displayDebugColors();

@@ -712,6 +712,8 @@ namespace Meltdown
 
 				MeltdownLED.ExecutePattern(modeRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING, 0, 1);
 				MeltdownLED.ExecuteEffect(modeRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING);
+
+				MeltdownLED.IncrementFrame();
 			}
 
 			if (MeltdownLED.GetTop())
@@ -733,17 +735,20 @@ namespace Meltdown
 			setColor(effectRingLeds, NUM_LEDS_PER_MED_RING, CRGB::Black);
 			MeltdownLED.ExecuteEffect(effectRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING, 1);
 
-			if (MeltdownLED.GetFullBright())
+			/*if (MeltdownLED.GetFullBright())
 			{
 				MeltdownLED.MaximizeBrightness(patternRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
 				MeltdownLED.MaximizeBrightness(effectValRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
 				MeltdownLED.MaximizeBrightness(modeRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING);
-			}
+			}*/
 
 			tryAutoMode();
 		}
 
-		LEDS.delay(1000 / MeltdownLED.GetFps());
+		if (MeltdownLED.GetDelay() > 0)
+		{
+			delay(MeltdownLED.GetDelay());
+		}
 
 		LEDS.show();
 	}
