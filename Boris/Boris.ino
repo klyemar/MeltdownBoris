@@ -77,11 +77,13 @@ namespace Meltdown
 			gSelectedIndexes = INDEXES_WHEELS;
 
 			clearLedIndexes();
-
 			for (int i = 0; i < NUM_PENTS; i++)
 			{
 				for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
 				{
+					// Temporary workaround for hardware fault.
+					if (i == 3 && j == 4) continue;
+
 					for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
 					{
 						ledIndexes[(i * NUM_WHEEL_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
@@ -99,9 +101,11 @@ namespace Meltdown
 			gSelectedIndexes = INDEXES_WHEEL + pentNumber;
 
 			clearLedIndexes();
-
 			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
 			{
+				// Temporary workaround for hardware fault.
+				if (pentNumber == 3 && j == 4) continue;
+
 				for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
 				{
 					ledIndexes[(j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (pentNumber * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
@@ -118,7 +122,6 @@ namespace Meltdown
 			gSelectedIndexes = INDEXES_SPOKES;
 
 			clearLedIndexes();
-
 			for (int i = 0; i < NUM_PENTS; i++)
 			{
 				for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
@@ -140,7 +143,6 @@ namespace Meltdown
 			gSelectedIndexes = INDEXES_SPOKE + pentNumber;
 
 			clearLedIndexes();
-
 			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
 			{
 				for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
