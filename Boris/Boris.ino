@@ -39,6 +39,15 @@ namespace Meltdown
 
 #pragma region INDEX SETUP
 
+	const String INDEXES_NONE = "NONE";
+	const String INDEXES_ALL = "ALL";
+	const String INDEXES_WHEELS = "WHEELS";
+	const String INDEXES_WHEEL = "WHEEL";
+	const String INDEXES_SPOKES = "SPOKES";
+	const String INDEXES_SPOKE = "SPOKE";
+
+	String gSelectedIndexes = INDEXES_NONE;
+
 	void clearLedIndexes()
 	{
 		for (int i = 0; i < NUM_LEDS; i++)
@@ -47,18 +56,36 @@ namespace Meltdown
 		}
 	}
 
+	void setIndexesForAll()
+	{
+		if (gSelectedIndexes != INDEXES_ALL)
+		{
+			gSelectedIndexes = INDEXES_ALL;
+
+			for (int i = 0; i < NUM_LEDS; i++)
+			{
+				ledIndexes[i] = i;
+			}
+		}
+	}
+
 	/// Set the indexes for all wheel sections, treating them as one long contiguous strip.
 	void setIndexesForWheels()
 	{
-		clearLedIndexes();
-
-		for (int i = 0; i < NUM_PENTS; i++)
+		if (gSelectedIndexes != INDEXES_WHEELS)
 		{
-			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+			gSelectedIndexes = INDEXES_WHEELS;
+
+			clearLedIndexes();
+
+			for (int i = 0; i < NUM_PENTS; i++)
 			{
-				for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
+				for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
 				{
-					ledIndexes[(i * NUM_WHEEL_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
+					for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
+					{
+						ledIndexes[(i * NUM_WHEEL_LEDS_PER_PENT) + (j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
+					}
 				}
 			}
 		}
@@ -67,13 +94,18 @@ namespace Meltdown
 	/// Set the indexes for the wheel section of a single pent.
 	void setIndexesForWheel(int pentNumber)
 	{
-		clearLedIndexes();
-
-		for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+		if (gSelectedIndexes != INDEXES_WHEEL + pentNumber)
 		{
-			for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
+			gSelectedIndexes = INDEXES_WHEEL + pentNumber;
+
+			clearLedIndexes();
+
+			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
 			{
-				ledIndexes[(j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (pentNumber * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
+				for (int k = 0; k < NUM_WHEEL_LEDS_PER_STRIP; k++)
+				{
+					ledIndexes[(j * NUM_WHEEL_LEDS_PER_STRIP) + k] = (pentNumber * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + k;
+				}
 			}
 		}
 	}
@@ -81,15 +113,20 @@ namespace Meltdown
 	/// Set the indexes for all spoke sections, treating them as one long contigous strip.
 	void setIndexesForSpokes()
 	{
-		clearLedIndexes();
-
-		for (int i = 0; i < NUM_PENTS; i++)
+		if (gSelectedIndexes != INDEXES_SPOKES)
 		{
-			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+			gSelectedIndexes = INDEXES_SPOKES;
+
+			clearLedIndexes();
+
+			for (int i = 0; i < NUM_PENTS; i++)
 			{
-				for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
+				for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
 				{
-					ledIndexes[(i * NUM_SPOKE_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k;
+					for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
+					{
+						ledIndexes[(i * NUM_SPOKE_LEDS_PER_PENT) + (j * NUM_SPOKE_LEDS_PER_STRIP) + k] = (i * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k;
+					}
 				}
 			}
 		}
@@ -98,13 +135,18 @@ namespace Meltdown
 	/// Set the indexes for the spokes of a single pent.
 	void setIndexesForSpokes(int pentNumber)
 	{
-		clearLedIndexes();
-
-		for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
+		if (gSelectedIndexes != INDEXES_SPOKE + pentNumber)
 		{
-			for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
+			gSelectedIndexes = INDEXES_SPOKE + pentNumber;
+
+			clearLedIndexes();
+
+			for (int j = 0; j < NUM_STRIPS_PER_PENT; j++)
 			{
-				ledIndexes[(j * NUM_SPOKE_LEDS_PER_STRIP) + k] = (pentNumber * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k;
+				for (int k = 0; k < NUM_SPOKE_LEDS_PER_STRIP; k++)
+				{
+					ledIndexes[(j * NUM_SPOKE_LEDS_PER_STRIP) + k] = (pentNumber * NUM_LEDS_PER_PENT) + (j * NUM_LEDS_PER_STRIP) + NUM_WHEEL_LEDS_PER_STRIP + k;
+				}
 			}
 		}
 	}
@@ -135,10 +177,8 @@ namespace Meltdown
 
 	void executeSleepPattern()
 	{
-		setIndexesForWheels();
-		MeltdownLED.Sunrise(leds, ledIndexes, NUM_WHEEL_LEDS);
-		setIndexesForSpokes();
-		MeltdownLED.Sunrise(leds, ledIndexes, NUM_SPOKE_LEDS);
+		setIndexesForAll();
+		MeltdownLED.Sunrise(leds, ledIndexes, NUM_LEDS);
 	}
 
 	void tryExecuteCommand()
@@ -183,17 +223,19 @@ namespace Meltdown
 				{
 					MeltdownLED.SetPause();
 				}
-				else if (command.equals(MeltdownSerial.FULL_BRIGHT))
+				else if (command.equals(MeltdownSerial.BLACK))
 				{
-					MeltdownLED.SetFullBright();
+					MeltdownLED.SetBlack();
+				}
+				else if (command.equals(MeltdownSerial.MIRROR))
+				{
+					MeltdownLED.SetMirror();
 				}
 				else if (command.equals(MeltdownSerial.PATTERN))
 				{
 					// Set to black.
-					setIndexesForWheels();
-					MeltdownLED.SetAllColor(leds, ledIndexes, NUM_WHEEL_LEDS, CRGB::Black);
-					setIndexesForSpokes();
-					MeltdownLED.SetAllColor(leds, ledIndexes, NUM_SPOKE_LEDS, CRGB::Black);
+					setIndexesForAll();
+					MeltdownLED.SetAllColor(leds, ledIndexes, NUM_LEDS, CRGB::Black);
 
 					int patternNumber = MeltdownLED.SetPatternNumber();
 					MeltdownLogger.Debug(Serial, F("Setting pattern number"), patternNumber);
@@ -308,11 +350,6 @@ namespace Meltdown
 			MeltdownLED.ExecutePattern(leds, ledIndexes, numLeds);
 			MeltdownLED.ExecuteEffect(leds, ledIndexes, numLeds);
 		}
-
-		/*if (MeltdownLED.GetFullBright())
-		{
-			MeltdownLED.MaximizeBrightness(leds, ledIndexes, numLeds);
-		}*/
 	}
 
 	void executeSpokes(int numLeds)
@@ -328,20 +365,15 @@ namespace Meltdown
 			MeltdownLED.ExecutePattern(leds, ledIndexes, numLeds);
 			MeltdownLED.ExecuteEffect(leds, ledIndexes, numLeds);
 		}
-
-		/*if (MeltdownLED.GetFullBright())
-		{
-			MeltdownLED.MaximizeBrightness(leds, ledIndexes, numLeds);
-		}*/
 	}
 
 	void executeLoop()
 	{
 		tryExecuteCommand();
 
-		if (!MeltdownLED.GetPause())
+		if (!MeltdownLED.GetPause() && !MeltdownLED.GetBlack())
 		{
-			if (MeltdownLED.GetFullBright())
+			if (MeltdownLED.GetMirror())
 			{
 				for (int i = 0; i < NUM_PENTS; i++)
 				{
@@ -368,6 +400,12 @@ namespace Meltdown
 
 				MeltdownLED.IncrementFrame(1.5f);
 			}
+		}
+		else if (MeltdownLED.GetBlack())
+		{
+			// Set to black.
+			setIndexesForAll();
+			MeltdownLED.SetAllColor(leds, ledIndexes, NUM_LEDS, CRGB::Black);
 		}
 
 		if (MeltdownLED.GetDelay() > 0)

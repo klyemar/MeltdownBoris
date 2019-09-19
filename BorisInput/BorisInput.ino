@@ -38,9 +38,9 @@ namespace Meltdown
 #define MODE_PIN BUTTON_PIN_3
 #define HUE1_PIN BUTTON_PIN_4
 #define HUE2_PIN BUTTON_PIN_5
-#define HUE3_PIN BUTTON_PIN_9
-#define HUE4_PIN BUTTON_PIN_10
-#define FULL_BRIGHT_PIN BUTTON_PIN_11
+#define BLACK_PIN BUTTON_PIN_9
+#define HUE3_PIN BUTTON_PIN_10
+#define MIRROR_PIN BUTTON_PIN_11
 #define EFFECT_PIN BUTTON_PIN_6
 #define BOTTOM_PIN BUTTON_PIN_7
 #define TOP_PIN BUTTON_PIN_8
@@ -49,8 +49,8 @@ namespace Meltdown
 #define PARTIAL_RING_PIN ANALOG_PIN_2
 
 #define CODE_INIT_PIN PAUSE_PIN
-#define CODE_PIN_1 HUE3_PIN
-#define CODE_PIN_2 HUE4_PIN
+#define CODE_PIN_1 BLACK_PIN
+#define CODE_PIN_2 HUE3_PIN
 #define CODE_PIN_3 HUE2_PIN
 #define CODE_PIN_4 HUE1_PIN
 
@@ -94,8 +94,8 @@ namespace Meltdown
 	Button hue1Button = { HUE1_PIN };
 	Button hue2Button = { HUE2_PIN };
 	Button hue3Button = { HUE3_PIN };
-	Button hue4Button = { HUE4_PIN };
-	Button fullBrightButton = { FULL_BRIGHT_PIN };
+	Button blackButton = { BLACK_PIN };
+	Button mirrorButton = { MIRROR_PIN };
 	Button pauseButton = { PAUSE_PIN };
 
 #pragma region PATTERNS
@@ -416,7 +416,14 @@ namespace Meltdown
 	void toggleHue1() { toggleHue(1, MeltdownSerial.HUE1); }
 	void toggleHue2() { toggleHue(2, MeltdownSerial.HUE2); }
 	void toggleHue3() { toggleHue(3, MeltdownSerial.HUE3); }
-	void toggleHue4() { toggleHue(4, MeltdownSerial.HUE4); }
+
+	void toggleBlack() 
+	{
+		bool blackVal = MeltdownLED.ToggleBlack();
+
+		MeltdownLogger.Debug(Serial, "Toggling Black", blackVal);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.BLACK, blackVal);
+	}
 
 	void setTopPosition()
 	{
@@ -466,12 +473,12 @@ namespace Meltdown
 		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.PAUSE, pauseVal);
 	}
 
-	void toggleFullBright()
+	void toggleMirror()
 	{
-		bool fullBrightVal = MeltdownLED.ToggleFullBright();
+		bool mirrorVal = MeltdownLED.ToggleMirror();
 
-		MeltdownLogger.Debug(Serial, "Setting Full Bright", fullBrightVal);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_BRIGHT, fullBrightVal);
+		MeltdownLogger.Debug(Serial, "Toggling Mirror", mirrorVal);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.MIRROR, mirrorVal);
 	}
 
 	void tryAutoMode()
@@ -603,9 +610,9 @@ namespace Meltdown
 			checkButtonState(&bottomButton);
 			checkButtonState(&hue1Button);
 			checkButtonState(&hue2Button);
+			checkButtonState(&blackButton);
 			checkButtonState(&hue3Button);
-			checkButtonState(&hue4Button);
-			checkButtonState(&fullBrightButton);
+			checkButtonState(&mirrorButton);
 		}
 	}
 
@@ -626,9 +633,9 @@ namespace Meltdown
 
 		topButton.callback = setTopPosition;
 		bottomButton.callback = setBottomPosition;
-		fullBrightButton.callback = toggleFullBright;
+		mirrorButton.callback = toggleMirror;
 		hue3Button.callback = toggleHue3;
-		hue4Button.callback = toggleHue4;
+		blackButton.callback = toggleBlack;
 		pauseButton.callback = togglePause;
 	}
 
@@ -734,13 +741,6 @@ namespace Meltdown
 
 			setColor(effectRingLeds, NUM_LEDS_PER_MED_RING, CRGB::Black);
 			MeltdownLED.ExecuteEffect(effectRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING, 1);
-
-			/*if (MeltdownLED.GetFullBright())
-			{
-				MeltdownLED.MaximizeBrightness(patternRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
-				MeltdownLED.MaximizeBrightness(effectValRingLeds, largeRingIndexes, NUM_LEDS_PER_LARGE_RING);
-				MeltdownLED.MaximizeBrightness(modeRingLeds, medRingIndexes, NUM_LEDS_PER_MED_RING);
-			}*/
 
 			tryAutoMode();
 		}

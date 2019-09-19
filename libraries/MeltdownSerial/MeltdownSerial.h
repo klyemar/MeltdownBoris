@@ -123,7 +123,7 @@ namespace Meltdown
 			const String HUE3 = "HUE3";
 			const String HUE4 = "HUE4";
 			const String HUE5 = "HUE5";
-			const String FULL_BRIGHT = "FLBR";
+			const String MIRROR = "MIRR";
 			const String TOP = "TOPP";
 			const String BOTTOM = "BOTP";
 			const String BOTH = "BOTH";
@@ -136,6 +136,7 @@ namespace Meltdown
 			const String AUTO_PATTERN = "AUPT";
 			const String AUTO_MODE = "AUMO";
 			const String AUTO_PATTERN_MODE = "AUPM";
+			const String BLACK = "BLAK";
 
 			String PrepareBoolCommand(String command, bool value) { return PrepareCommand(command, value ? 1 : 0); }
 

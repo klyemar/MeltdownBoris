@@ -34,10 +34,11 @@ namespace Meltdown
 			bool gHue3 = false;
 			bool gHue4 = false;
 			bool gHue5 = false;
-			bool gFullBright = false;
+			bool gMirror = false;
 			bool gInverse = false;
 			bool gGlitter = false;
 			bool gPause = false;
+			bool gBlack = false;
 			bool gTop = false;
 			bool gBottom = false;
 			bool gAutoModeActive = false;
@@ -53,19 +54,22 @@ namespace Meltdown
 
 			// List of patterns to cycle through.  Each is defined as a separate function below.
 			typedef void (CMeltdownLED::*SimplePatternList)(CRGB[], uint16_t[], int, int);
-			SimplePatternList gPatterns[8] = {
-				&CMeltdownLED::BlendColor,
+			SimplePatternList gPatterns[9] = {
 				&CMeltdownLED::RunningLights,
-				&CMeltdownLED::Rainbow,
-				&CMeltdownLED::Confetti,
-				&CMeltdownLED::Sinelon,
-				&CMeltdownLED::Bpm,
 				&CMeltdownLED::Juggle,
-				&CMeltdownLED::MeteorRain
+				//&CMeltdownLED::SolidColors,
+				&CMeltdownLED::Rainbow,
+				&CMeltdownLED::RainbowFull,
+				&CMeltdownLED::Bpm,
+				&CMeltdownLED::Sinelon,
+				&CMeltdownLED::Confetti,
+				&CMeltdownLED::BlendColor,
+				&CMeltdownLED::MeteorRain,
+				//&CMeltdownLED::Checkers,
 			};
 
 			// List of modes to cycle through.  Each is defined as a separate function below.
-			typedef void (CMeltdownLED::*ModeList)(CRGB[], uint16_t[], int);
+			typedef void (CMeltdownLED::* ModeList)(CRGB[], uint16_t[], int);
 			ModeList gEffects[2] = {
 				&CMeltdownLED::NullEffect,
 				&CMeltdownLED::GlitterEffect
@@ -198,16 +202,27 @@ namespace Meltdown
 
 			bool GetPause() { return gPause; }
 
-			// FULL BRIGHT //
+			// BLACK //
 
-			bool ToggleFullBright()
+			bool ToggleBlack()
 			{
-				gFullBright = !gFullBright;
-				return gFullBright;
+				gBlack = !gBlack;
+				return gBlack;
 			}
-			void SetFullBright() { gFullBright = MeltdownSerial.GetBoolValue(); }
+			void SetBlack() { gBlack = MeltdownSerial.GetBoolValue(); }
 
-			bool GetFullBright() { return gFullBright; }
+			bool GetBlack() { return gBlack; }
+
+			// MIRROR //
+
+			bool ToggleMirror()
+			{
+				gMirror = !gMirror;
+				return gMirror;
+			}
+			void SetMirror() { gMirror = MeltdownSerial.GetBoolValue(); }
+
+			bool GetMirror() { return gMirror; }
 
 			// AUTO MODE //
 
@@ -492,6 +507,22 @@ namespace Meltdown
 					leds[indexes[i]] = color;
 				}
 			}
+
+			void SetAllColor(CRGB leds[], uint16_t indexes[], int numLeds, CRGB color)
+			{
+				for (int i = 0; i < numLeds; i++)
+				{
+					leds[indexes[i]] = color;
+				}
+			}
+
+			void SetAllColor(CRGB leds[], uint16_t indexes[], int numLeds, int hue)
+			{
+				for (int i = 0; i < numLeds; i++)
+				{
+					leds[indexes[i]] = CHSV(hue, 255, 255);
+				}
+			}
 			
 			void FillGradientRgb(CRGB leds[], uint16_t indexes[], int numLeds,
 				uint16_t startpos, CRGB startcolor,
@@ -539,14 +570,6 @@ namespace Meltdown
 				}
 			}
 
-			void SetAllColor(CRGB leds[], uint16_t indexes[], int numLeds, CRGB color)
-			{
-				for (int i = 0; i < numLeds; i++)
-				{
-					leds[indexes[i]] = color;
-				}
-			}
-
 			void BlendAll(CRGB leds[], uint16_t indexes[], int numLeds, CRGB color, byte amount = 127)
 			{
 				for (int i = 0; i < numLeds; i++)
@@ -571,8 +594,12 @@ namespace Meltdown
 			{
 				for (int i = 0; i < numPositions; i++)
 				{
-					uint16_t index = indexes[random16(numLeds)];
-					leds[index] = CHSV(gHue + random8(hueOffset), 200, 255);
+					uint8_t random = random8(1, 255);
+					if ((float)numLeds / random > 1.5)
+					{
+						uint16_t index = indexes[random16(numLeds)];
+						leds[index] = CHSV(gHue + random8(hueOffset), 200, 255);
+					}
 				}
 			}
 
@@ -581,8 +608,12 @@ namespace Meltdown
 			{
 				for (int i = 0; i < numPositions; i++)
 				{
-					uint16_t index = indexes[random16(numLeds)];
-					leds[index] = color;
+					uint8_t random = random8(1, 255);
+					if ((float)numLeds / random > 1.5)
+					{
+						uint16_t index = indexes[random16(numLeds)];
+						leds[index] = color;
+					}
 				}
 			}
 
@@ -753,20 +784,97 @@ namespace Meltdown
 				}
 			}
 
-			void Rainbow(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
+			void SolidColors(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
-				int deltaHue = GetAnalogPattern(1, 15);
-				FillRainbow(leds, indexes, numLeds, gHue + gPos, deltaHue);
-
 				// Modes
-				SetNumModes(1);
+				SetNumModes(10);
 				switch (GetModeNumber(modeOffset))
 				{
 				case 1:
+					SetAllColor(leds, indexes, numLeds, CRGB::OrangeRed);
+					break;
+				case 2:
+					SetAllColor(leds, indexes, numLeds, CRGB::Orange);
+					break;
+				case 3:
+					SetAllColor(leds, indexes, numLeds, CRGB::Yellow);
+					break;
+				case 4:
+					SetAllColor(leds, indexes, numLeds, CRGB::GreenYellow);
+					break;
+				case 5:
+					SetAllColor(leds, indexes, numLeds, CRGB::Green);
+					break;
+				case 6:
+					SetAllColor(leds, indexes, numLeds, CRGB::Teal);
+					break;
+				case 7:
+					SetAllColor(leds, indexes, numLeds, CRGB::Blue);
+					break;
+				case 8:
+					SetAllColor(leds, indexes, numLeds, CRGB::Indigo);
+					break;
+				case 9:
+					SetAllColor(leds, indexes, numLeds, CRGB::Violet);
+					break;
+				case 10:
+					SetAllColor(leds, indexes, numLeds, CRGB::Magenta);
+					break;
+				default:
+					SetAllColor(leds, indexes, numLeds, CRGB::Red);
+				}
+			}
+
+			void Rainbow(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
+			{
+				static int hue = 1;
+
+				int deltaHue = GetAnalogPattern(1, 15);
+				FillRainbow(leds, indexes, numLeds, gHue + gPos + hue, deltaHue);
+
+				// Modes
+				SetNumModes(3);
+				switch (GetModeNumber(modeOffset))
+				{
+				case 1:
+					// Increment the hue.
+					hue++;
+					break; 
+				case 2:
 					// Invert rainbox colors.
 					Invert(leds, indexes, numLeds);
+					break; 
+				case 3:
+					// Invert rainbox colors and increment the hue.
+					Invert(leds, indexes, numLeds);
+					hue++;
 					break;
 				}
+			}
+
+			void RainbowFull(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
+			{
+				static int hue = 1;
+
+				// Modes
+				SetNumModes(3);
+				switch (GetModeNumber(modeOffset))
+				{
+				case 1:
+					if (GetFrame() % 2 == 0) hue++;
+					break;
+				case 2:
+					hue++;
+					break;
+				case 3:
+					hue += 2;
+					break;
+				default:
+					if (GetFrame() % 3 == 0) hue++;
+					break;
+				}
+
+				SetAllColor(leds, indexes, numLeds, hue);
 			}
 
 			void Confetti(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
@@ -845,12 +953,11 @@ namespace Meltdown
 				int bpm = 60;
 				int beat = beatsin8(bpm, 63, 255);
 				int multiplier = GetAnalogPattern(2, 12);
+				CRGBPalette16 palette = GetPalette(GetModeNumber(modeOffset));
 				for (int i = 0; i < numLeds; i++)
 				{
-					leds[indexes[i]] = ColorFromPalette(GetPalette(GetModeNumber(modeOffset)), i * multiplier, beat - (i * 10));
+					leds[indexes[i]] = ColorFromPalette(palette, i * multiplier, beat - (i * 10));
 				}
-
-				BlendFromHue(leds, indexes, numLeds);
 			}
 
 			void Juggle(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
@@ -961,60 +1068,83 @@ namespace Meltdown
 				}
 			}
 
+			void Checkers(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
+			{
+				//FadeSetsToBlackBy(leds, indexes, numLeds, 50);
+
+				SetNumModes(1);
+
+				int checkerSize = 4;
+
+				for (int i = 0; i < numLeds; i++)
+				{
+					int checker = i / 4;
+
+					if ((checker % 2 != 0 && sin8(gFrame) < 128) || (checker % 2 == 0 && sin8(gFrame) >= 128))
+					{
+						leds[indexes[i]] = CRGB::Red;
+					}
+					else
+					{
+						leds[indexes[i]] = CRGB::Black;
+					}
+				}
+			}
+
 			void RunningLights(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
 				SetNumModes(5);
-				SetFrameStep(20);
+				SetFrameStep(7);
 
-				byte red = 180;
-				byte green = 180;
-				byte blue = 100;
+				byte red = 90;
+				byte green = 90;
+				byte blue = 50;
 
-				int frequency = 2;
+				int frequency = 1.35;
 				int length = GetAnalogPattern(4, 40);
 
 				for (int i = 0; i < numLeds; i++)
 				{
-					float redSin;
-					float greenSin;
-					float blueSin;
+					double redSin;
+					double greenSin;
+					double blueSin;
 
 					// Modes
 					switch (GetModeNumber(modeOffset))
 					{
 						case 1:
 						{
-							redSin = (i * length) + (GetFrame() / (float)frequency / 1.5);
-							greenSin = (i * length) + (GetFrame() / (float)frequency);
-							blueSin = (i * length) + (GetFrame() / (float)frequency / 3);
+							redSin = (i * length) + (GetFrame() / (double)frequency / 1.5);
+							greenSin = (i * length) + (GetFrame() / (double)frequency);
+							blueSin = (i * length) + (GetFrame() / (double)frequency / 3);
 							break;
 						}
 						case 2:
 						{
-							redSin = (i * length) + (GetFrame() / (float)frequency * 1.5);
-							greenSin = (i * length) + (GetFrame() / (float)frequency * 3);
-							blueSin = (i * length) + (GetFrame() / (float)frequency / 1.5);
+							redSin = (i * length) + (GetFrame() / (double)frequency * 1.5);
+							greenSin = (i * length) + (GetFrame() / (double)frequency * 3);
+							blueSin = (i * length) + (GetFrame() / (double)frequency / 1.5);
 							break;
 						}
 						case 3:
 						{
-							redSin = (i * length) - (GetFrame() / (float)frequency);
-							greenSin = (i * length / 2) - (GetFrame() / (float)frequency);
-							blueSin = (i * length / 2) + (GetFrame() / (float)frequency);
+							redSin = (i * length) - (GetFrame() / (double)frequency);
+							greenSin = (i * length / 2) - (GetFrame() / (double)frequency);
+							blueSin = (i * length / 2) + (GetFrame() / (double)frequency);
 							break;
 						}
 						case 4:
 						{
-							redSin = (i * length) + (GetFrame() / (float)frequency);
-							greenSin = (i * length / 4) - (GetFrame() / (float)frequency);
-							blueSin = (i * length) + (GetFrame() / (float)frequency / 2);
+							redSin = (i * length) + (GetFrame() / (double)frequency);
+							greenSin = (i * length / 4) - (GetFrame() / (double)frequency);
+							blueSin = (i * length) + (GetFrame() / (double)frequency / 2);
 							break;
 						}
 						case 5:
 						{
-							redSin = (i * length) + (GetFrame() / (float)frequency);
-							greenSin = (i * length / 4) - (GetFrame() / (float)frequency);
-							blueSin = (i * length / 2) + (GetFrame() / (float)frequency / 2);
+							redSin = (i * length) + (GetFrame() / (double)frequency);
+							greenSin = (i * length / 4) - (GetFrame() / (double)frequency);
+							blueSin = (i * length / 2) + (GetFrame() / (double)frequency / 2);
 							break;
 						}
 						default:
@@ -1030,9 +1160,9 @@ namespace Meltdown
 						}
 					}
 
-					float redMult = redSin > 0 ? (sin8(redSin) / (float)255) : 0;
-					float greenMult = greenSin > 0 ? (sin8(greenSin) / (float)255) : 0;
-					float blueMult = blueSin > 0 ? (sin8(blueSin) / (float)255) : 0;
+					double redMult = sin8(redSin) / (double)255;
+					double greenMult = sin8(greenSin) / (double)255;
+					double blueMult = sin8(blueSin) / (double)255;
 
 					leds[indexes[i]] = CRGB(red * redMult, green * greenMult, blue * blueMult);
 
