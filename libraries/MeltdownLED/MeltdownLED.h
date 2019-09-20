@@ -1093,14 +1093,9 @@ namespace Meltdown
 
 			void RunningLights(CRGB leds[], uint16_t indexes[], int numLeds, int modeOffset = 0)
 			{
-				SetNumModes(5);
-				SetFrameStep(7);
+				SetNumModes(4);
+				SetFrameStep(3);
 
-				byte red = 90;
-				byte green = 90;
-				byte blue = 50;
-
-				int frequency = 1.35;
 				int length = GetAnalogPattern(4, 40);
 
 				for (int i = 0; i < numLeds; i++)
@@ -1114,59 +1109,46 @@ namespace Meltdown
 					{
 						case 1:
 						{
-							redSin = (i * length) + (GetFrame() / (double)frequency / 1.5);
-							greenSin = (i * length) + (GetFrame() / (double)frequency);
-							blueSin = (i * length) + (GetFrame() / (double)frequency / 3);
+							redSin = (i * length) + (float)GetFrame() / 1.5;
+							greenSin = (i * length) + (float)GetFrame();
+							blueSin = (i * length) + (float)GetFrame() / 3;
 							break;
 						}
 						case 2:
 						{
-							redSin = (i * length) + (GetFrame() / (double)frequency * 1.5);
-							greenSin = (i * length) + (GetFrame() / (double)frequency * 3);
-							blueSin = (i * length) + (GetFrame() / (double)frequency / 1.5);
+							redSin = (i * length) + (float)GetFrame() * 1.5;
+							greenSin = (i * length) + (float)GetFrame() * 3;
+							blueSin = (i * length) + (float)GetFrame() / 1.5;
 							break;
 						}
 						case 3:
 						{
-							redSin = (i * length) - (GetFrame() / (double)frequency);
-							greenSin = (i * length / 2) - (GetFrame() / (double)frequency);
-							blueSin = (i * length / 2) + (GetFrame() / (double)frequency);
+							redSin = (i * length) + (float)GetFrame();
+							greenSin = (i * length / 4) - (float)GetFrame();
+							blueSin = (i * length) + (float)GetFrame() / 2;
 							break;
 						}
 						case 4:
 						{
-							redSin = (i * length) + (GetFrame() / (double)frequency);
-							greenSin = (i * length / 4) - (GetFrame() / (double)frequency);
-							blueSin = (i * length) + (GetFrame() / (double)frequency / 2);
-							break;
-						}
-						case 5:
-						{
-							redSin = (i * length) + (GetFrame() / (double)frequency);
-							greenSin = (i * length / 4) - (GetFrame() / (double)frequency);
-							blueSin = (i * length / 2) + (GetFrame() / (double)frequency / 2);
+							redSin = (i * length) + (float)GetFrame();
+							greenSin = 0;
+							blueSin = (i * length / 2) + (float)GetFrame() / 2;
 							break;
 						}
 						default:
 						{
-							red = beatsin8(32, 0, 255, 0, 128);
-							green = beatsin8(16, 0, 255);
-							blue = beatsin8(32, 0, 255);
-
-							redSin = 0; //(i * length) + (gFrame / (float)frequency);
-							greenSin = (i * length) + (GetFrame() / (float)frequency);
-							blueSin = (i * length) + (GetFrame() / (float)frequency);
+							redSin = 0; 
+							greenSin = (i * length) + (float)GetFrame();
+							blueSin = (i * length) + (float)GetFrame();
 							break;
 						}
 					}
 
-					double redMult = sin8(redSin) / (double)255;
-					double greenMult = sin8(greenSin) / (double)255;
-					double blueMult = sin8(blueSin) / (double)255;
+					byte redMult = sin8(redSin);
+					byte greenMult = sin8(greenSin);
+					byte blueMult = sin8(blueSin);
 
-					leds[indexes[i]] = CRGB(red * redMult, green * greenMult, blue * blueMult);
-
-					// BlendFromHue(leds, indexes, numLeds, 32);
+					leds[indexes[i]] = CRGB(redMult, greenMult, blueMult);
 				}
 			}
 
