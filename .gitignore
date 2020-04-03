@@ -33,9 +33,18 @@
 
 /build
 /Boris/.vscode/
-/BorisInput/.vscode/
 /Boris/.vs
 /Boris/CppProperties.json
+/Boris/Debug/
+/Boris/Release/
+/BorisInput/.vscode/
+/BorisInput/.vs/
+/BorisInput/Debug/
+/BorisInput/Release/
+/Umbroris/.vscode/
+/Umbroris/.vs/
+/Umbroris/Debug/
+/Umbroris/Release/
 /.vs
 /ComputerToArduino/ComputerToArduino/obj/
 
@@ -48,8 +57,10 @@ board.buildinfo
 *_vm
 /libraries/Adafruit_GFX_Library
 /libraries/RGB_matrix_Panel
+/libraries/Adafruit_NeoPixel
+/libraries/arduino_698756
+/libraries/arduino_101189
+/libraries/FastLED
 /BorisInput/BorisInput.vcxproj
 /Boris/Boris.vcxproj
 /MazeEscape
-/libraries/arduino_698756
-/libraries/arduino_101189
