@@ -34,24 +34,23 @@ public:
   inline static void setOutput() { pinMode(PIN, OUTPUT); } // TODO: perform MUX config { _PDDR::r() |= _MASK; }
   inline static void setInput() { pinMode(PIN, INPUT); } // TODO: preform MUX config { _PDDR::r() &= ~_MASK; }
 
-  inline static void hi() __attribute__ ((always_inline)) { PORT->Group[_GRP].OUTSET.reg = _MASK; }
-  inline static void lo() __attribute__ ((always_inline)) { PORT->Group[_GRP].OUTCLR.reg = _MASK; }
-  // inline static void lo() __attribute__ ((always_inline)) { PORT->Group[_GRP].BSRR = (_MASK<<16); }
-  inline static void set(register port_t val) __attribute__ ((always_inline)) { PORT->Group[_GRP].OUT.reg = val; }
+  inline static void hi() __attribute__ ((always_inline)) { PORT_IOBUS->Group[_GRP].OUTSET.reg = _MASK; }
+  inline static void lo() __attribute__ ((always_inline)) { PORT_IOBUS->Group[_GRP].OUTCLR.reg = _MASK; }
+  inline static void set(register port_t val) __attribute__ ((always_inline)) { PORT_IOBUS->Group[_GRP].OUT.reg = val; }
 
   inline static void strobe() __attribute__ ((always_inline)) { toggle(); toggle(); }
 
-  inline static void toggle() __attribute__ ((always_inline)) { PORT->Group[_GRP].OUTTGL.reg = _MASK; }
+  inline static void toggle() __attribute__ ((always_inline)) { PORT_IOBUS->Group[_GRP].OUTTGL.reg = _MASK; }
 
   inline static void hi(register port_ptr_t port) __attribute__ ((always_inline)) { hi(); }
   inline static void lo(register port_ptr_t port) __attribute__ ((always_inline)) { lo(); }
   inline static void fastset(register port_ptr_t port, register port_t val) __attribute__ ((always_inline)) { *port = val; }
 
-  inline static port_t hival() __attribute__ ((always_inline)) { return PORT->Group[_GRP].OUT.reg | _MASK; }
-  inline static port_t loval() __attribute__ ((always_inline)) { return PORT->Group[_GRP].OUT.reg & ~_MASK; }
-  inline static port_ptr_t port() __attribute__ ((always_inline)) { return &PORT->Group[_GRP].OUT.reg; }
-  inline static port_ptr_t sport() __attribute__ ((always_inline)) { return &PORT->Group[_GRP].OUTSET.reg; }
-  inline static port_ptr_t cport() __attribute__ ((always_inline)) { return &PORT->Group[_GRP].OUTCLR.reg; }
+  inline static port_t hival() __attribute__ ((always_inline)) { return PORT_IOBUS->Group[_GRP].OUT.reg | _MASK; }
+  inline static port_t loval() __attribute__ ((always_inline)) { return PORT_IOBUS->Group[_GRP].OUT.reg & ~_MASK; }
+  inline static port_ptr_t port() __attribute__ ((always_inline)) { return &PORT_IOBUS->Group[_GRP].OUT.reg; }
+  inline static port_ptr_t sport() __attribute__ ((always_inline)) { return &PORT_IOBUS->Group[_GRP].OUTSET.reg; }
+  inline static port_ptr_t cport() __attribute__ ((always_inline)) { return &PORT_IOBUS->Group[_GRP].OUTCLR.reg; }
   inline static port_t mask() __attribute__ ((always_inline)) { return _MASK; }
 };
 
@@ -170,27 +169,59 @@ _DEFPIN_ARM( 20, 0,  6); _DEFPIN_ARM( 21, 0,  7);
 
 #define HAS_HARDWARE_PIN_SUPPORT 1
 
+#elif defined(ARDUINO_SAMD_NANO_33_IOT)
+
+#define MAX_PIN 25
+_DEFPIN_ARM(  0, 0, 11); _DEFPIN_ARM(  1, 0, 10); _DEFPIN_ARM(  2, 0, 14); _DEFPIN_ARM(  3, 0,  9);
+_DEFPIN_ARM(  4, 0,  8); _DEFPIN_ARM(  5, 0, 15); _DEFPIN_ARM(  6, 0, 20); _DEFPIN_ARM(  7, 0, 21);
+_DEFPIN_ARM(  8, 0,  6); _DEFPIN_ARM(  9, 0,  7); _DEFPIN_ARM( 10, 0, 18); _DEFPIN_ARM( 11, 0, 16);
+_DEFPIN_ARM( 12, 0, 19); _DEFPIN_ARM( 13, 0, 17); _DEFPIN_ARM( 14, 0,  2); _DEFPIN_ARM( 15, 1,  8);
+_DEFPIN_ARM( 16, 1,  9); _DEFPIN_ARM( 17, 0,  4); _DEFPIN_ARM( 18, 0,  5); _DEFPIN_ARM( 19, 1,  2);
+_DEFPIN_ARM( 20, 0, 22); _DEFPIN_ARM( 21, 0, 23); _DEFPIN_ARM( 22, 0, 12); _DEFPIN_ARM( 23, 1, 10);
+_DEFPIN_ARM( 24, 1, 11);
+
+#define SPI_DATA 23
+#define SPI_CLOCK 24
+
+#define HAS_HARDWARE_PIN_SUPPORT 1
+
 #elif defined(ARDUINO_GEMMA_M0)
 
 #define MAX_PIN 4
-_DEFPIN_ARM( 0, 0, 4); _DEFPIN_ARM( 1, 0, 2); _DEFPIN_ARM( 2, 0, 5); 
+_DEFPIN_ARM( 0, 0, 4); _DEFPIN_ARM( 1, 0, 2); _DEFPIN_ARM( 2, 0, 5);
 _DEFPIN_ARM( 3, 0, 0); _DEFPIN_ARM( 4, 0, 1);
 
 #define HAS_HARDWARE_PIN_SUPPORT 1
 
 #elif defined(ADAFRUIT_TRINKET_M0)
 
-#define MAX_PIN 5
+#define MAX_PIN 7
 _DEFPIN_ARM( 0, 0, 8); _DEFPIN_ARM( 1, 0, 2); _DEFPIN_ARM( 2, 0, 9);
-_DEFPIN_ARM( 3, 0, 7); _DEFPIN_ARM( 4, 0, 6);
+_DEFPIN_ARM( 3, 0, 7); _DEFPIN_ARM( 4, 0, 6); _DEFPIN_ARM( 7, 0, 0); _DEFPIN_ARM( 8, 0, 1);
 
 #define SPI_DATA  4
 #define SPI_CLOCK 3
 
 #define HAS_HARDWARE_PIN_SUPPORT 1
 
-#endif
+#elif defined(ADAFRUIT_ITSYBITSY_M0)
 
+#define MAX_PIN 16
+_DEFPIN_ARM( 2, 0, 14); _DEFPIN_ARM( 3, 0, 9); _DEFPIN_ARM( 4, 0, 8);
+_DEFPIN_ARM( 5, 0, 15); _DEFPIN_ARM( 6, 0, 20); _DEFPIN_ARM( 7, 0, 21);
+_DEFPIN_ARM( 8, 0, 6); _DEFPIN_ARM( 9, 0, 7); _DEFPIN_ARM( 10, 0, 18);
+_DEFPIN_ARM( 11, 0, 16); _DEFPIN_ARM( 12, 0, 19); _DEFPIN_ARM( 13, 0, 17);
+_DEFPIN_ARM( 29, 0, 10); // MOSI
+_DEFPIN_ARM( 30, 0, 11); // SCK
+_DEFPIN_ARM( 40, 0, 0); //APA102 Clock
+_DEFPIN_ARM( 41, 0, 1) //APA102 Data
+
+#define SPI_DATA  29
+#define SPI_CLOCK 30
+
+#define HAS_HARDWARE_PIN_SUPPORT 1
+
+#endif
 
 
 #endif // FASTLED_FORCE_SOFTWARE_PINS
