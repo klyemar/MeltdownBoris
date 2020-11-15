@@ -30,5 +30,8 @@
     <ClInclude Include="..\libraries\MeltdownLogger\MeltdownLogger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\libraries\MeltdownSerial\MeltdownSerial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

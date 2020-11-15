@@ -1,6 +1,6 @@
-#include <FastLED.h>
-#include <MeltdownLED.h>
-#include <MeltdownLogger.h>
+#include "FastLED.h"
+#include "MeltdownLED.h"
+#include "MeltdownLogger.h"
 
 // Boris, short for Explora Borealis, is an interactive light display
 // controlled by several individual user inputs.
@@ -12,8 +12,8 @@ namespace Meltdown
 {
 #define DEBUG true
 
-#define LED_PIN 0 // Trinket M0
-//#define LED_PIN 11 // Trinket
+//#define LED_PIN 0 // Trinket M0
+#define LED_PIN 11 // Metro Mini
 
 #define BUTTON_PIN_1 2
 #define BUTTON_PIN_2 3
@@ -23,9 +23,10 @@ namespace Meltdown
 #define MODE_PIN BUTTON_PIN_2
 #define EFFECT_PIN BUTTON_PIN_3
 
-//#define NUM_LEDS_PER_STRIP 20 // Neon Lights
+#define NUM_LEDS_PER_STRIP 20 // Neon Lights
 //#define NUM_LEDS_PER_STRIP 50 // Christmas Lights
-#define NUM_LEDS_PER_STRIP 93 // Circle Lamp
+//#define NUM_LEDS_PER_STRIP 100 // Christmas Lights x2
+//#define NUM_LEDS_PER_STRIP 93 // Circle Lamp
 //#define NUM_LEDS_PER_STRIP 34 // 60ppm Umbrella
 //#define NUM_LEDS_PER_STRIP 17 // 30ppm Umbrella
 
@@ -33,10 +34,11 @@ namespace Meltdown
 //#define NUM_STRIPS 8 // Umbrella
 #define NUM_LEDS NUM_LEDS_PER_STRIP * NUM_STRIPS
 
-//#define LED_TYPE WS2811 // Neon Lights
-#define LED_TYPE WS2812B // Other Lights
+#define LED_TYPE WS2811 // Neon Lights
+//#define LED_TYPE WS2812B // Other Lights
 
-#define RGB_ORDER GRB
+#define RGB_ORDER GRB // Umbrella and Lamp
+//#define RGB_ORDER RGB // Christmas Lights and Neon Lights
 
 	CRGB leds[NUM_LEDS];
 	uint16_t ledIndexes[NUM_LEDS];
@@ -127,7 +129,7 @@ namespace Meltdown
 		}
 		else if (MeltdownLED.IsAutoPatternMode())
 		{
-			EVERY_N_SECONDS(15)
+			EVERY_N_SECONDS(30)
 			{
 				// If we've reached the limit of modes for this pattern, get the next pattern.
 				if (MeltdownLED.GetModeNumber() >= MeltdownLED.GetNumModes())
