@@ -197,6 +197,14 @@ namespace Meltdown
 		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.MODE, modeNumber);
 	}
 
+	void initAuto()
+	{
+		MeltdownLED.SetAutoMode(MeltdownLED.PatternMode);
+
+		MeltdownLogger.Debug(Serial, "Initializing Auto Mode...");
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.AUTO_PATTERN_MODE, 1);
+	}
+
 	void nextPattern()
 	{
 		// Reset the mode.
@@ -698,6 +706,7 @@ namespace Meltdown
 		initPattern();
 		initMode();
 		initEffect();
+		initAuto();
 	}
 
 	void executeLoop()
