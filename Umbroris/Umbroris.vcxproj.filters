@@ -21,9 +21,6 @@
     <ClInclude Include="__vm\.Umbroris.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\libraries\MeltdownLED\MeltdownLED.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\libraries\FastLED\FastLED.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -31,6 +28,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\libraries\MeltdownSerial\MeltdownSerial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeltdownConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libraries\MobileMeltdown\MobileMeltdown.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

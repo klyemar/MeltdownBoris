@@ -1,6 +1,7 @@
-#include "FastLED.h"
-#include "MeltdownLED.h"
-#include "MeltdownLogger.h"
+#include <FastLED.h>
+#include <MeltdownSerial.h>
+#include <MeltdownLogger.h>
+#include <MobileMeltdown.h>
 
 // Boris, short for Explora Borealis, is an interactive light display
 // controlled by several individual user inputs.
@@ -12,8 +13,8 @@ namespace Meltdown
 {
 #define DEBUG true
 
-//#define LED_PIN 0 // Trinket M0
-#define LED_PIN 11 // Metro Mini
+#define LED_PIN 0 // Trinket M0
+//#define LED_PIN 11 // Metro Mini
 
 #define BUTTON_PIN_1 2
 #define BUTTON_PIN_2 3
@@ -23,10 +24,10 @@ namespace Meltdown
 #define MODE_PIN BUTTON_PIN_2
 #define EFFECT_PIN BUTTON_PIN_3
 
-#define NUM_LEDS_PER_STRIP 20 // Neon Lights
+//#define NUM_LEDS_PER_STRIP 20 // Neon Lights
 //#define NUM_LEDS_PER_STRIP 50 // Christmas Lights
 //#define NUM_LEDS_PER_STRIP 100 // Christmas Lights x2
-//#define NUM_LEDS_PER_STRIP 93 // Circle Lamp
+#define NUM_LEDS_PER_STRIP 93 // Circle Lamp
 //#define NUM_LEDS_PER_STRIP 34 // 60ppm Umbrella
 //#define NUM_LEDS_PER_STRIP 17 // 30ppm Umbrella
 
@@ -34,14 +35,13 @@ namespace Meltdown
 //#define NUM_STRIPS 8 // Umbrella
 #define NUM_LEDS NUM_LEDS_PER_STRIP * NUM_STRIPS
 
-#define LED_TYPE WS2811 // Neon Lights
-//#define LED_TYPE WS2812B // Other Lights
+//#define LED_TYPE WS2811 // Neon Lights
+#define LED_TYPE WS2812B // Other Lights
 
 #define RGB_ORDER GRB // Umbrella and Lamp
 //#define RGB_ORDER RGB // Christmas Lights and Neon Lights
 
 	CRGB leds[NUM_LEDS];
-	uint16_t ledIndexes[NUM_LEDS];
 
 	struct Button
 	{
@@ -74,21 +74,27 @@ namespace Meltdown
 		setColor(leds, NUM_LEDS, color);
 	}
 
+	void initLeds()
+	{
+		MobileMeltdown.SetNumLeds(NUM_LEDS);
+		MeltdownLogger.Debug(Serial, "Initializing LEDs...");
+	}
+
 	void initPattern()
 	{
-		MeltdownLED.SetPatternNumber(0);
+		MobileMeltdown.SetPatternNumber(0);
 		MeltdownLogger.Debug(Serial, "Initializing Pattern...");
 	}
 
 	void initMode()
 	{
-		MeltdownLED.SetModeNumber(0);
+		MobileMeltdown.SetModeNumber(0);
 		MeltdownLogger.Debug(Serial, "Initializing Mode...");
 	}
 
 	void initEffect()
 	{
-		MeltdownLED.SetEffectNumber(0);
+		MobileMeltdown.SetEffectNumber(0);
 		MeltdownLogger.Debug(Serial, "Initializing Effect...");
 	}
 
@@ -98,41 +104,41 @@ namespace Meltdown
 		initMode();
 
 		// Set to black.
-		MeltdownLED.SetAllColor(leds, ledIndexes, NUM_LEDS, CRGB::Black);
-		MeltdownLED.IncrementPatternNumber();
+		MobileMeltdown.SetAllColor(leds, CRGB::Black);
+		MobileMeltdown.IncrementPatternNumber();
 		MeltdownLogger.Debug(Serial, "Next Pattern...");
 	}
 
 	void nextMode()
 	{
-		int modeNumber = MeltdownLED.IncrementModeNumber();
+		int modeNumber = MobileMeltdown.IncrementModeNumber();
 		MeltdownLogger.Debug(Serial, "Next Mode", modeNumber);
 	}
 
 	void nextEffect()
 	{
-		int effectNumber = MeltdownLED.IncrementEffectNumber();
+		int effectNumber = MobileMeltdown.IncrementEffectNumber();
 		MeltdownLogger.Debug(Serial, "Next Effect...");
 	}
 
 	void executeAutoMode()
 	{
-		if (!MeltdownLED.GetAutoModeActive()) return;
+		if (!MobileMeltdown.GetAutoModeActive()) return;
 
-		if (MeltdownLED.IsAutoPattern())
+		if (MobileMeltdown.IsAutoPattern())
 		{
 			EVERY_N_SECONDS(15) { nextPattern(); }
 		}
-		else if (MeltdownLED.IsAutoMode())
+		else if (MobileMeltdown.IsAutoMode())
 		{
 			EVERY_N_SECONDS(10) { nextMode(); }
 		}
-		else if (MeltdownLED.IsAutoPatternMode())
+		else if (MobileMeltdown.IsAutoPatternMode())
 		{
 			EVERY_N_SECONDS(30)
 			{
 				// If we've reached the limit of modes for this pattern, get the next pattern.
-				if (MeltdownLED.GetModeNumber() >= MeltdownLED.GetNumModes())
+				if (MobileMeltdown.GetModeNumber() >= MobileMeltdown.GetNumModes())
 				{
 					nextPattern();
 				}
@@ -151,7 +157,7 @@ namespace Meltdown
 	void deactivateAutoMode()
 	{
 		MeltdownLogger.Debug(Serial, "Deactivating Auto Mode...");
-		MeltdownLED.SetAutoModeActive(false);
+		MobileMeltdown.SetAutoModeActive(false);
 	}
 
 #pragma endregion SET MODIFIERS
@@ -167,7 +173,7 @@ namespace Meltdown
 		if (button->state == LOW && button->previousState == HIGH)
 		{
 			// This is awkward, but for now if this is the first that the code button has been pressed, we must activate it here.
-			if (!MeltdownLED.GetAutoModeActive())
+			if (!MobileMeltdown.GetAutoModeActive())
 			{
 				button->callback();
 			}
@@ -182,7 +188,7 @@ namespace Meltdown
 		else if (button->state == HIGH && button->previousState == LOW)
 		{
 			// If auto mode is not active, call the button callback. Otherwise, deactivate auto mode.
-			if (!MeltdownLED.GetAutoModeActive())
+			if (!MobileMeltdown.GetAutoModeActive())
 			{
 				if (!button->isToggle)
 				{
@@ -220,34 +226,6 @@ namespace Meltdown
 		effectButton.isToggle = true;
 	}
 
-	void clearLedIndexes()
-	{
-		for (int i = 0; i < NUM_LEDS; i++)
-		{
-			ledIndexes[i] = 0;
-		}
-	}
-
-	void setLedIndexesForAll()
-	{
-		clearLedIndexes();
-
-		for (int i = 0; i < NUM_LEDS; i++)
-		{
-			ledIndexes[i] = i;
-		}
-	}
-
-	void setLedIndexesForStrip(int stripNumber)
-	{
-		clearLedIndexes();
-
-		for (int i = 0; i < NUM_LEDS_PER_STRIP; i++)
-		{
-			ledIndexes[i] = (stripNumber * NUM_LEDS_PER_STRIP) + i;
-		}
-	}
-
 	void executeSetup()
 	{
 		// initialize serial communication at 9600 bits per second:
@@ -258,7 +236,7 @@ namespace Meltdown
 
 		MeltdownLogger.InitSerial(DEBUG);
 
-		MeltdownLED.InitTimers();
+		MobileMeltdown.InitTimers();
 
 		delay(3000);
 
@@ -268,14 +246,13 @@ namespace Meltdown
 
 		setupButtons();
 
-		setLedIndexesForAll();
-
-		MeltdownLED.SetAutoMode(MeltdownLED.PatternMode);
+		MobileMeltdown.SetAutoMode(MobileMeltdown.PatternMode);
 
 		pinMode(BUTTON_PIN_1, INPUT_PULLUP);
 		pinMode(BUTTON_PIN_2, INPUT_PULLUP);
 		pinMode(BUTTON_PIN_3, INPUT_PULLUP);
 
+		initLeds();
 		initPattern();
 		initMode();
 		initEffect();
@@ -285,18 +262,17 @@ namespace Meltdown
 	{
 		checkButtonStates();
 
-		if (MeltdownLED.GetAutoModeActive())
+		if (MobileMeltdown.GetAutoModeActive())
 		{
 			executeAutoMode();
 		}
 
-		setLedIndexesForAll();
-		MeltdownLED.ExecutePattern(leds, ledIndexes, NUM_LEDS, 0, 0);
-		MeltdownLED.ExecuteEffect(leds, ledIndexes, NUM_LEDS, 0);
+		MobileMeltdown.ExecutePattern(leds);
+		MobileMeltdown.ExecuteEffect(leds);
 
-		MeltdownLED.IncrementFrame();
+		MobileMeltdown.IncrementFrame();
 
-    delay(10);
+		delay(10);
 
 		LEDS.show();
 	}
