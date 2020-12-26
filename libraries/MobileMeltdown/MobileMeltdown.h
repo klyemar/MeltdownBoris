@@ -1,5 +1,6 @@
 #include <FastLED.h>
 #include <MeltdownSerial.h>
+#include <math.h>
 
 namespace Meltdown
 {
@@ -20,15 +21,26 @@ namespace Meltdown
 		PatternFunc patternFunc;
 	};
 
+	struct PaletteData
+	{
+		CRGBPalette16 palette;
+		TBlendType blendType;
+	};
+
 	class CMobileMeltdown
 	{
 	public: CMobileMeltdown();
 
 		  // Global LED values.
 		  int gNumLeds = 0;
+
 		  int gCurrentPatternNumber = 0;
 		  int gCurrentEffectNumber = 0;
 		  int gCurrentModeNumber = 0;
+
+		  // Palette values, to be honest this is kind of hacky for now... I dunno... TODO!!!
+		  int gLastRandomPaletteNumber = 0;
+		  int gRandomPaletteNumber = 0;
 
 		  int gBrightness = 48;
 		  int gHue = 0;
@@ -54,16 +66,17 @@ namespace Meltdown
 
 		// List of patterns to cycle through.  Each is defined as a separate function below.
 		  MeltdownPattern gPatterns[10] = {
-			  { 4, &CMobileMeltdown::RunningLights },
+			  //{ 10, &CMobileMeltdown::SolidColors },
+			  //{ 3, &CMobileMeltdown::RainbowFull },
+			  { 3, &CMobileMeltdown::Orbital },
+			  { 3, &CMobileMeltdown::Confetti },
 			  { 3, &CMobileMeltdown::Juggle },
-			  { 10, &CMobileMeltdown::SolidColors },
-			  { 3, &CMobileMeltdown::Rainbow },
-			  { 3, &CMobileMeltdown::RainbowFull },
-			  { 4, &CMobileMeltdown::Bpm },
+			  { 4, &CMobileMeltdown::RunningLights },
 			  { 4, &CMobileMeltdown::Sinelon },
-			  { 5, &CMobileMeltdown::Confetti },
 			  { 4, &CMobileMeltdown::BlendColor },
-			  { 2, &CMobileMeltdown::MeteorRain }
+			  { 2, &CMobileMeltdown::MeteorRain },
+			  { 2, &CMobileMeltdown::Rainbow },
+			  { 3, &CMobileMeltdown::Bpm },
 		  };
 
 		  // List of effects to cycle through.  Each is defined as a separate function below.
@@ -213,6 +226,8 @@ namespace Meltdown
 
 		  long GetFrame(long maxFrames) { return gFrame % maxFrames; }
 
+		  int GetFrameOffset(float multiplier) { return GetFrame() * multiplier; }
+
 #pragma region EFFECTS
 
 		  int GetEffectNumber()
@@ -282,12 +297,26 @@ namespace Meltdown
 
 		  int SetModeNumber(int number)
 		  {
+			  // TODO - I'm trying to randomize the global palette. This is hacky, do something better?
+			  while (gLastRandomPaletteNumber == gRandomPaletteNumber)
+			  {
+				  gRandomPaletteNumber = random8(8);
+			  }
+			  gLastRandomPaletteNumber = gRandomPaletteNumber;
+
 			  gCurrentModeNumber = number;
 			  return gCurrentModeNumber;
 		  }
 
 		  int SetModeNumber()
 		  {
+			  // TODO - I'm trying to randomize the global palette. This is hacky, do something better?
+			  while (gLastRandomPaletteNumber == gRandomPaletteNumber)
+			  {
+				  gRandomPaletteNumber = random8(8);
+			  }
+			  gLastRandomPaletteNumber = gRandomPaletteNumber;
+
 			  gCurrentModeNumber = MeltdownSerial.GetValue();
 			  return gCurrentModeNumber;
 		  }
@@ -425,28 +454,26 @@ namespace Meltdown
 		  }
 
 		  /// Generate random colors (withing a confinement of hue) in random locations.
-		  void SetRandomColor(CRGB leds[], int numPositions, int hueOffset = 0, float randomFactor = .3)
+		  void SetRandomColor(CRGB leds[], CRGB color, int numPositions, float frequency = .25)
 		  {
 			  for (int i = 0; i < numPositions; i++)
 			  {
 				  uint8_t random = random8(1, 255);
-				  if ((float)gNumLeds / random > 1.5)
+				  if (random < 255 * frequency)
 				  {
-					  // Set a color based off a random hue offset.
-					  uint8_t hueOffsetMin = (uint8_t)(hueOffset * randomFactor);
-					  uint8_t hueOffsetMax = hueOffset;
-					  leds[random16(gNumLeds)] = CHSV(gHue + random8(hueOffsetMin, hueOffsetMax), 200, 255);
+					  //leds[random16(gNumLeds)] = CHSV(gHue + random8(hueOffsetMin, hueOffsetMax), 200, 255);
+					  leds[random16(gNumLeds)] = CRGB(color);
 				  }
 			  }
 		  }
 
 		  /// Add a specific color in random locations.
-		  void SetRandomColor(CRGB leds[], int numPositions, CRGB::HTMLColorCode color)
+		  void SetRandomColor(CRGB leds[], int numPositions, CRGB::HTMLColorCode color, float frequency = .05)
 		  {
 			  for (int i = 0; i < numPositions; i++)
 			  {
 				  uint8_t random = random8(1, 255);
-				  if ((float)gNumLeds / random > 1.5)
+				  if (random < 255 * frequency)
 				  {
 					  leds[random16(gNumLeds)] = color;
 				  }
@@ -457,69 +484,87 @@ namespace Meltdown
 		  {
 			  for (int i = 0; i < numSinelons; i++)
 			  {
-				  int hue = gHue + (int)((255 / numSinelons) * i);
-
 				  int index = (pos + (int)(gNumLeds / numSinelons) * (i + 1)) % gNumLeds;
-				  leds[index] = CHSV(hue, 255, 192);
+				  // Let's get some contrast up in here!
+				  int rainbowOffset = 5;
+
+				  leds[index] = GetRainbowColor(i, rainbowOffset);
 			  }
 		  }
 
-		  CRGB GetRainbowColor(int index = 0)
+		  CRGB GetRainbowColor(int index = 0, int offset = 0)
 		  {
-			  switch (index % 8)
+			  switch ((index + offset) % 6)
 			  {
 			  case 0:
-				  return CRGB::Red;
+				  return 0xBE00AE;	// Magenta
+				  //return CRGB::Red;
 			  case 1:
-				  return CRGB::Orange;
+				  return 0x3E00C3;	// Purple
+				  //return CRGB::Orange;
 			  case 2:
-				  return CRGB::Yellow;
+				  return 0x08CFE2;	// Cyan
+				  //return CRGB::Yellow;
 			  case 3:
-				  return CRGB::Green;
+				  return 0x37E600;	// Green
+				  //return CRGB::Green;
 			  case 4:
-				  return CRGB::Blue;
+				  return 0xFFFF00;	// Yellow
+				  //return CRGB::Blue;
 			  case 5:
-				  return CRGB::Indigo;
-			  case 6:
-				  return CRGB::Violet;
-			  case 7:
-				  return CRGB::Pink;
+				  return 0xFF6200;	// Orange
 			  }
 		  }
 
-		  CRGBPalette16 GetPalette()
+		  PaletteData GetPalette()
 		  {
 			  return GetPalette(gCurrentModeNumber);
 		  }
 
-		  CRGBPalette16 GetPalette(int index)
+		  PaletteData GetPalette(int8_t index)
 		  {
-			  CRGBPalette16 palettes[5] = {
+			  /*CRGBPalette16 palettes[5] = {
 				  PartyColors_p,
 				  ForestColors_p,
 				  CloudColors_p,
 				  HeatColors_p,
 				  RainbowColors_p
+			  };*/
+
+			  PaletteData palettes[8] = {
+				  { Contrast_p, LINEARBLEND },
+				  { Cool_p, LINEARBLEND },
+				  { Neon_p, LINEARBLEND },
+				  { Warm_p, LINEARBLEND },
+				  { Cyberpunk_p, LINEARBLEND },
+				  { Rainbow_p, LINEARBLEND },
+				  { PartyColors_p, LINEARBLEND },
+				  { RainbowColors_p, LINEARBLEND }
 			  };
 
 			  return palettes[index % ARRAY_SIZE(palettes)];
 		  }
 
-		  CRGB ColorGradientFromPalette(CRGBPalette16 palette, int numLeds, int pos, bool isReverse = false)
+		  PaletteData GetRandomPalette()
+		  {
+			  return GetPalette(gRandomPaletteNumber);
+		  }
+
+		  CRGB ColorGradientFromPalette(CRGBPalette16 palette, int numLeds, int pos, int brightness = 255, TBlendType blendType = LINEARBLEND, bool isReverse = false)
 		  {
 			  const int numPaletteColors = 255;
 			  // Validity check.
-			  if (pos > numLeds) pos = numLeds;
+			  pos = pos % numLeds;
 
 			  // Get the appropriate color from the palette, mapped to the number of LEDs.
 			  int mappedPos = numPaletteColors / numLeds * pos;
 			  if (isReverse)
 			  {
-				  return ColorFromPalette(palette, (numPaletteColors - mappedPos));
+				  return ColorFromPalette(palette, (numPaletteColors - mappedPos), brightness, blendType);
 			  }
 			  else
 			  {
-				  return ColorFromPalette(palette, mappedPos);
+				  return ColorFromPalette(palette, mappedPos, brightness, blendType);
 			  }
 		  }
 
@@ -605,9 +650,10 @@ namespace Meltdown
 
 			  for (int i = 0; i < numGradients; i++)
 			  {
-				  CRGB color1 = GetRainbowColor(i);
-				  CRGB color2 = GetRainbowColor(i + 1);
-				  CRGB color3 = GetRainbowColor(i + 2);
+				  int offset = 4;
+				  CRGB color1 = GetRainbowColor(i + offset);
+				  CRGB color2 = GetRainbowColor(i + 1 + offset);
+				  CRGB color3 = GetRainbowColor(i + 2 + offset);
 
 				  // Blend between two different colors over time.
 				  CRGB blend1 = blend(color1, color2, speed);
@@ -622,36 +668,36 @@ namespace Meltdown
 			  }
 		  }
 
-		  //void HalloweenBlendColor(CRGB leds[])
-		  //{
-			 // int speed = beatsin8(GetAnalogPattern(16, 48), 128, 255);
+		  void HalloweenBlendColor(CRGB leds[])
+		  {
+			  int speed = beatsin8(48, 128, 255);
 
-			 // // Modes
-			 // HalloweenFillGradients(leds, GetModeNumber() + 3, speed);
-		  //}
+			  // Modes
+			  HalloweenFillGradients(leds, GetModeNumber() + 3, speed);
+		  }
 
-		  //void HalloweenFillGradients(CRGB leds[], int numGradients, int speed)
-		  //{
-			 // if (numGradients < 4) numGradients = 4;
+		  void HalloweenFillGradients(CRGB leds[], int numGradients, int speed)
+		  {
+			  if (numGradients < 4) numGradients = 4;
 
-			 // for (int i = 0; i < numGradients; i++)
-			 // {
-				//  CRGB color1 = CRGB(117, 0, 255);
-				//  CRGB color2 = CRGB(90, 0, 138);
-				//  CRGB color3 = CRGB(30, 0, 90);
+			  for (int i = 0; i < numGradients; i++)
+			  {
+				  CRGB color1 = CRGB(117, 0, 255);
+				  CRGB color2 = CRGB(90, 0, 138);
+				  CRGB color3 = CRGB(30, 0, 90);
 
-				//  // Blend between two different colors over time.
-				//  CRGB blend1 = blend(color1, color2, speed);
-				//  CRGB blend2 = blend(color2, color3, speed);
+				  // Blend between two different colors over time.
+				  CRGB blend1 = blend(color1, color2, speed);
+				  CRGB blend2 = blend(color2, color3, speed);
 
-				//  int startPos = (gNumLeds / numGradients) * i;
-				//  if (startPos < 0) startPos = 0;
-				//  int endPos = ((gNumLeds / numGradients) * (i + 1)) - 1;
-				//  if (endPos < 1) endPos = 1;
+				  int startPos = (gNumLeds / numGradients) * i;
+				  if (startPos < 0) startPos = 0;
+				  int endPos = ((gNumLeds / numGradients) * (i + 1)) - 1;
+				  if (endPos < 1) endPos = 1;
 
-				//  FillGradientRgb(leds, startPos, blend1, endPos, blend2);
-			 // }
-		  //}
+				  FillGradientRgb(leds, startPos, blend1, endPos, blend2);
+			  }
+		  }
 
 		  void SolidColors(CRGB leds[])
 		  {
@@ -697,24 +743,21 @@ namespace Meltdown
 		  {
 			  static int hue = 1;
 
-			  int deltaHue = GetAnalogPattern(1, 15);
-			  FillRainbow(leds, gHue + gPos + hue, deltaHue);
-
 			  // Modes
 			  switch (GetModeNumber())
 			  {
-			  case 1:
+			  case 0:
 				  // Increment the hue.
 				  hue++;
+				  FillRainbow(leds, gHue + gPos + hue, 127 / gNumLeds);
+				  break;
+			  case 1:
+				  hue++;
+				  FillRainbow(leds, gHue + gPos + hue, 255 / gNumLeds);
 				  break;
 			  case 2:
-				  // Invert rainbox colors.
-				  Invert(leds);
-				  break;
-			  case 3:
-				  // Invert rainbox colors and increment the hue.
-				  Invert(leds);
 				  hue++;
+				  FillRainbow(leds, gHue + gPos + hue, 511 / gNumLeds);
 				  break;
 			  }
 		  }
@@ -745,38 +788,45 @@ namespace Meltdown
 
 		  void Confetti(CRGB leds[])
 		  {
-			  int fade = GetAnalogPattern(2, 30);
+			  FadeSetsToBlackBy(leds, 15);
+
+			  // Get some slight variation in the selected colors.
+			  int numColors = random8(4, 8);
+			  // Get a random palette to select our colors.
+			  PaletteData paletteData = GetRandomPalette();
+
+			  for (int i = 0; i < numColors; i++)
+			  {
+				  SetRandomColor(leds, ColorGradientFromPalette(paletteData.palette, numColors, i, random8(64, 195)), 1, .3);
+			  }
+		  }
+
+		  void Orbital(CRGB leds[])
+		  {
+			  static int counter = 0;
+
+			  // The speed to shift the gradient.
+			  float gradientMultiplier = 1.5;
+			  // The speed to shift the position.
+			  float posMultiplier = .4;
+			  // The pixel values.
+			  int space = 20;
+			  int width = 4;
+			  // Fade value.
+			  int fade = 48;
+
 			  FadeSetsToBlackBy(leds, fade);
 
-			  // Modes
-			  switch (GetModeNumber())
+			  for (int i = 0; i < gNumLeds; i++)
 			  {
-			  case 1:
-				  SetRandomColor(leds, 4, 64);		// Orange
-				  SetRandomColor(leds, 4, 0);		// Red
-				  break;
-			  case 2:
-				  SetRandomColor(leds, 3, 64);		// Orange	
-				  SetRandomColor(leds, 3, 0);		// Red
-				  SetRandomColor(leds, 6, 128);	// Blue
-				  break;
-			  case 3:
-				  SetRandomColor(leds, 2, 64);		// Orange
-				  SetRandomColor(leds, 2, 0);		// Red
-				  SetRandomColor(leds, 5, 128);	// Blue
-				  SetRandomColor(leds, 5, 196);	// Purple
-				  break;
-			  case 4:
-				  SetRandomColor(leds, 4, 128);	// Blue
-				  SetRandomColor(leds, 4, 196);	// Purple
-				  break;
-			  case 5:
-				  SetRandomColor(leds, 6, 196);	// Purple
-				  break;
-			  default:
-				  SetRandomColor(leds, 6, 64);		// Orange
-				  break;
+				  // Effectively, make a solid block that is 'width' pixels wide with a 'space' pixel wide gap in between.
+				  if ((i + GetFrameOffset(posMultiplier)) % (space + width) < width)
+				  {
+					  leds[i] = ColorGradientFromPalette(GetRandomPalette().palette, gNumLeds, i + GetFrameOffset(gradientMultiplier));
+				  }
 			  }
+
+			  counter++;
 		  }
 
 		  //void HalloweenConfetti(CRGB leds[])
@@ -802,51 +852,29 @@ namespace Meltdown
 		  void Sinelon(CRGB leds[])
 		  {
 			  // Display a dot moving back and forth in a sin wave pattern.
-			  int fade = GetAnalogPattern(2, 30);
-			  FadeSetsToBlackBy(leds, fade);
+			  FadeSetsToBlackBy(leds, 60);
 
 			  uint16_t index = beatsin16(8, 0, gNumLeds - 1);
-			  leds[index] = CHSV(gHue + 64, 255, 192);
 
-			  // Modes
-			  switch (GetModeNumber())
-			  {
-			  case 1:
-			  {
-				  // Add a second, opposite dot moving in the opposite direction.
-				  uint16_t oppositeIndex = (gNumLeds - 1) - (beatsin16(8, 0, gNumLeds - 1));
-				  leds[oppositeIndex] = CHSV(gHue + 128, 255, 192);
-				  break;
-			  }
-			  case 2:
-				  GenerateSinelons(leds, 2, index);
-				  break;
-			  case 3:
-				  GenerateSinelons(leds, 3, index);
-				  break;
-			  case 4:
-				  GenerateSinelons(leds, 5, index);
-				  break;
-			  }
+			  GenerateSinelons(leds, GetModeNumber() + 2, index);
 		  }
 
 		  void Bpm(CRGB leds[])
 		  {
 			  int bpm = 60;
-			  int beat = beatsin8(bpm, 63, 255);
-			  int multiplier = GetAnalogPattern(2, 12);
-			  CRGBPalette16 palette = GetPalette(GetModeNumber());
+			  int beat = beatsin8(bpm, 0, 255);
+			  PaletteData paletteData = GetRandomPalette();
+
 			  for (int i = 0; i < gNumLeds; i++)
 			  {
-				  leds[i] = ColorFromPalette(palette, i * multiplier, beat - (i * 10));
+				  leds[i] = ColorGradientFromPalette(paletteData.palette, gNumLeds, i + GetFrameOffset(.35), beat - (i * 10), paletteData.blendType);
 			  }
 		  }
 
 		  void Juggle(CRGB leds[])
 		  {
-			  int fade = GetAnalogPattern(3, 100);
 			  // Eight colored dots, weaving in and out of sync with each other.
-			  FadeSetsToBlackBy(leds, fade);
+			  FadeSetsToBlackBy(leds, 48);
 
 			  int numBalls = 3;
 
@@ -854,20 +882,19 @@ namespace Meltdown
 			  switch (GetModeNumber())
 			  {
 			  case 1:
-				  numBalls = 5;
+				  numBalls = 4;
 				  break;
 			  case 2:
-				  numBalls = 7;
+				  numBalls = 5;
 				  break;
 			  case 3:
-				  numBalls = 9;
+				  numBalls = 6;
 				  break;
 			  }
 
 			  for (int i = 0; i < numBalls; i++)
 			  {
-				  int dotHue = i * (255 / numBalls);
-				  leds[beatsin16(i + 7, 0, gNumLeds - 1)] = CHSV(dotHue + gHue, 200, 255);
+				  leds[beatsin16(i + 5, 0, gNumLeds - 1)] = GetRainbowColor(i + 4);
 			  }
 		  }
 
@@ -891,30 +918,30 @@ namespace Meltdown
 			  const boolean meteorRandomDecay = true;
 
 			  // Medium meteor.
-			  int meteorSize = 25;
-			  int frameMultiplier = 1;
-			  gDelay = 15;
-
-			  // Modes
-			  switch (GetModeNumber())
-			  {
-				  // Small meteors.
-			  case 1:
-			  {
-				  meteorSize = 5;
-				  frameMultiplier = 1.5;
-				  gDelay = 7;
-				  break;
-			  }
+			  /*int meteorSize = 25;
+			  gDelay = 15;*/
 			  // Large meteor.
-			  case 2:
-			  {
-				  meteorSize = 50;
-				  frameMultiplier = 1;
-				  gDelay = 20;
-				  break;
-			  }
-			  }
+			  int meteorSize = 50;
+			  gDelay = 20;
+
+			  //// Modes
+			  //switch (GetModeNumber())
+			  //{
+				 // // Small meteors.
+				 // case 1:
+				 // {
+					//  meteorSize = 5;
+					//  gDelay = 7;
+					//  break;
+				 // }
+				 // // Large meteor.
+				 // case 2:
+				 // {
+					//  meteorSize = 50;
+					//  gDelay = 20;
+					//  break;
+				 // }
+			  //}
 
 			  // Fade brightness all LEDs one step.
 			  for (int i = 0; i < gNumLeds; i++)
@@ -928,13 +955,13 @@ namespace Meltdown
 			  }
 
 			  // Draw meteor.
-			  long frame = GetFrame(gNumLeds * frameMultiplier);
+			  long frame = GetFrame(gNumLeds);
 			  for (int i = 0; i < meteorSize; i++)
 			  {
 				  if ((frame - i < gNumLeds) && (frame - i >= 0))
 				  {
 					  // Set the colors of the meteor using a reversed HeatColors gradient, so the meteor's tail is white hot trailing off to red.
-					  leds[frame - i] = ColorGradientFromPalette(HeatColors_p, meteorSize, i, true);
+					  leds[frame - i] = ColorGradientFromPalette(GetRandomPalette().palette, meteorSize, i, 255, LINEARBLEND, true);
 				  }
 			  }
 		  }
@@ -962,7 +989,7 @@ namespace Meltdown
 
 		  void RunningLights(CRGB leds[])
 		  {
-			  int length = GetAnalogPattern(4, 40);
+			  int length = 4;
 
 			  for (int i = 0; i < gNumLeds; i++)
 			  {
@@ -973,50 +1000,168 @@ namespace Meltdown
 				  // Modes
 				  switch (GetModeNumber())
 				  {
-				  case 1:
-				  {
-					  redSin = (i * length) + (float)GetFrame() / 1.5;
-					  greenSin = (i * length) + (float)GetFrame();
-					  blueSin = (i * length) + (float)GetFrame() / 3;
-					  break;
-				  }
-				  case 2:
-				  {
-					  redSin = (i * length) + (float)GetFrame() * 1.5;
-					  greenSin = (i * length) + (float)GetFrame() * 3;
-					  blueSin = (i * length) + (float)GetFrame() / 1.5;
-					  break;
-				  }
-				  case 3:
-				  {
-					  redSin = (i * length) + (float)GetFrame();
-					  greenSin = (i * length / 4) - (float)GetFrame();
-					  blueSin = (i * length) + (float)GetFrame() / 2;
-					  break;
-				  }
-				  case 4:
-				  {
-					  redSin = (i * length) + (float)GetFrame();
-					  greenSin = 0;
-					  blueSin = (i * length / 2) + (float)GetFrame() / 2;
-					  break;
-				  }
-				  default:
-				  {
-					  redSin = 0;
-					  greenSin = (i * length) + (float)GetFrame();
-					  blueSin = (i * length) + (float)GetFrame();
-					  break;
-				  }
+					  case 1:
+					  {
+						  redSin = (i * length) + (float)GetFrame() / 1.5;
+						  greenSin = (i * length) + (float)GetFrame();
+						  blueSin = (i * length) + (float)GetFrame() / 3;
+						  break;
+					  }
+					  case 2:
+					  {
+						  redSin = (i * length) + (float)GetFrame() * 1.5;
+						  greenSin = (i * length) + (float)GetFrame() * 3;
+						  blueSin = (i * length) + (float)GetFrame() / 1.5;
+						  break;
+					  }
+					  case 3:
+					  {
+						  redSin = (i * length) + (float)GetFrame();
+						  greenSin = (i * length / 4) - (float)GetFrame();
+						  blueSin = (i * length) + (float)GetFrame() / 2;
+						  break;
+					  }
+					  case 4:
+					  {
+						  redSin = (i * length) + (float)GetFrame();
+						  greenSin = 0;
+						  blueSin = (i * length / 2) + (float)GetFrame() / 2;
+						  break;
+					  }
+					  default:
+					  {
+						  redSin = 0;
+						  greenSin = (i * length) + (float)GetFrame();
+						  blueSin = (i * length) + (float)GetFrame();
+						  break;
+					  }
 				  }
 
-				  byte redMult = sin8(redSin);
-				  byte greenMult = sin8(greenSin);
-				  byte blueMult = sin8(blueSin);
+				  float speedMultiplier = 3.5;
+				  byte redMult = sin8(redSin * speedMultiplier);
+				  byte greenMult = sin8(greenSin * speedMultiplier);
+				  byte blueMult = sin8(blueSin * speedMultiplier);
 
 				  leds[i] = CRGB(redMult, greenMult, blueMult);
 			  }
 		  }
+
+		  const TProgmemRGBPalette16 Rainbow_p FL_PROGMEM =
+		  {
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+		  };
+
+		  const TProgmemRGBPalette16 Cool_p FL_PROGMEM =
+		  {
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta			  
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+		  };
+
+		  const TProgmemRGBPalette16 Warm_p FL_PROGMEM =
+		  {
+			  0x08CFE2,	// Cyan
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0x37E600,	// Green
+		  };
+
+		  const TProgmemRGBPalette16 Cyberpunk_p FL_PROGMEM =
+		  {
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+		  };
+
+		  const TProgmemRGBPalette16 Contrast_p FL_PROGMEM =
+		  {
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0xFF6200,	// Orange
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0xBE00AE,	// Magenta
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+			  0x08CFE2,	// Cyan
+		  };
+
+		  const TProgmemRGBPalette16 Neon_p FL_PROGMEM =
+		  {
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0xFFFF00,	// Yellow
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x3E00C3,	// Purple
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+			  0x37E600,	// Green
+		  };
 
 		  //void theaterChase(byte red, byte green, byte blue, int SpeedDelay) {
 		  //	for (int j = 0; j < 10; j++) {  //do 10 cycles of chasing
