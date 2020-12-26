@@ -14,6 +14,7 @@ namespace Meltdown
 
 	struct MeltdownPattern
 	{
+		// The pattern function.
 		typedef void(Meltdown::CMeltdownLED::* PatternFunc) (CRGB[], uint16_t[], int, int);
 
 		int numModes;
@@ -74,7 +75,6 @@ namespace Meltdown
 			  { 4, &CMeltdownLED::BlendColor },
 			  { 2, &CMeltdownLED::MeteorRain }
 		  }; 
-
 
 		  // List of effects to cycle through.  Each is defined as a separate function below.
 		  typedef void (CMeltdownLED::* EffectList)(CRGB[], uint16_t[], int);
