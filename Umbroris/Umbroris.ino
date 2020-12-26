@@ -130,7 +130,7 @@ namespace Meltdown
 		}
 		else if (MobileMeltdown.IsAutoPatternMode())
 		{
-			EVERY_N_SECONDS(20)
+			EVERY_N_SECONDS(30)
 			{
 				// If we've reached the limit of modes for this pattern, get the next pattern.
 				if (MobileMeltdown.GetModeNumber() >= MobileMeltdown.GetNumModes())

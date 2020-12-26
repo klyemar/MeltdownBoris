@@ -65,15 +65,15 @@ namespace Meltdown
 		  const unsigned long gAutoModePeriod = 1000L * 60 * 30; // 30 minutes
 
 		// List of patterns to cycle through.  Each is defined as a separate function below.
-		  MeltdownPattern gPatterns[10] = {
+		  MeltdownPattern gPatterns[9] = {
 			  //{ 10, &CMobileMeltdown::SolidColors },
 			  //{ 3, &CMobileMeltdown::RainbowFull },
+			  { 4, &CMobileMeltdown::BlendColor },
 			  { 3, &CMobileMeltdown::Orbital },
 			  { 3, &CMobileMeltdown::Confetti },
 			  { 3, &CMobileMeltdown::Juggle },
 			  { 4, &CMobileMeltdown::RunningLights },
 			  { 4, &CMobileMeltdown::Sinelon },
-			  { 4, &CMobileMeltdown::BlendColor },
 			  { 2, &CMobileMeltdown::MeteorRain },
 			  { 2, &CMobileMeltdown::Rainbow },
 			  { 3, &CMobileMeltdown::Bpm },
