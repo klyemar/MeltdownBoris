@@ -110,7 +110,6 @@
     <ClInclude Include="..\libraries\MeltdownLogger\MeltdownLogger.h" />
     <ClInclude Include="..\libraries\MeltdownSerial\MeltdownSerial.h" />
     <ClInclude Include="..\libraries\MobileMeltdown\MobileMeltdown.h" />
-    <ClInclude Include="MeltdownConfig.h" />
     <ClInclude Include="__vm\.Umbroris.vsarduino.h" />
   </ItemGroup>
   <PropertyGroup>

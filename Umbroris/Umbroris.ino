@@ -13,8 +13,33 @@ namespace Meltdown
 {
 #define DEBUG true
 
-#define LED_PIN 0 // Trinket M0
-//#define LED_PIN 11 // Metro Mini
+	// Circle Lamp
+//#define LED_TYPE WS2812B 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 93; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB; 
+
+	// Neon Light
+//#define LED_TYPE WS2811 
+	//const uint8_t gDataPin = 11; const int gNumLedsPerStrip = 20; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrdergOrder = RGB; 
+
+	// Christmas Bulbs
+#define LED_TYPE WS2812B 
+	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 50; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
+
+	// Christmas Bulbs XL
+//#define LED_TYPE WS2812B 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 100; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
+
+	// Umbrella
+//#define LED_TYPE WS2812B 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 17; const int gNumStrips = 8; const int gBrightness = 110; const EOrder gOrder = GRB; 
+
+	// Umbrella XL
+//#define LED_TYPE WS2812B 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 34; const int gNumStrips = 8; const int gBrightness = 110; const EOrder gOrder = GRB; 
+
+	// Arbitrary Config
+//#define LED_TYPE WS2812B 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 425; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; 
 
 #define BUTTON_PIN_1 2
 #define BUTTON_PIN_2 3
@@ -23,25 +48,6 @@ namespace Meltdown
 #define PATTERN_PIN BUTTON_PIN_1
 #define MODE_PIN BUTTON_PIN_2
 #define EFFECT_PIN BUTTON_PIN_3
-
-//#define NUM_LEDS_PER_STRIP 20 // Neon Lights
-//#define NUM_LEDS_PER_STRIP 50 // Christmas Lights
-//#define NUM_LEDS_PER_STRIP 100 // Christmas Lights x2
-#define NUM_LEDS_PER_STRIP 93 // Circle Lamp
-//#define NUM_LEDS_PER_STRIP 34 // 60ppm Umbrella
-//#define NUM_LEDS_PER_STRIP 17 // 30ppm Umbrella
-
-#define NUM_STRIPS 1 // Non-Umbrella
-//#define NUM_STRIPS 8 // Umbrella
-#define NUM_LEDS NUM_LEDS_PER_STRIP * NUM_STRIPS
-
-//#define LED_TYPE WS2811 // Neon Lights
-#define LED_TYPE WS2812B // Other Lights
-
-#define RGB_ORDER GRB // Umbrella and Lamp
-//#define RGB_ORDER RGB // Christmas Lights and Neon Lights
-
-	CRGB leds[NUM_LEDS];
 
 	struct Button
 	{
@@ -59,24 +65,13 @@ namespace Meltdown
 	Button modeButton = { MODE_PIN };
 	Button effectButton = { EFFECT_PIN };
 
+	CRGB leds[gNumLedsPerStrip * gNumStrips];
+
 #pragma region PATTERNS
-
-	void setColor(CRGB ledSets[], int numLeds, CRGB::HTMLColorCode color)
-	{
-		for (int i = 0; i < numLeds; i++)
-		{
-			ledSets[i] = color;
-		}
-	}
-
-	void setAllColor(CRGB::HTMLColorCode color)
-	{
-		setColor(leds, NUM_LEDS, color);
-	}
 
 	void initLeds()
 	{
-		MobileMeltdown.SetNumLeds(NUM_LEDS);
+		MobileMeltdown.SetNumLeds(gNumLedsPerStrip * gNumStrips);
 		MeltdownLogger.Debug(Serial, "Initializing LEDs...");
 	}
 
@@ -135,7 +130,7 @@ namespace Meltdown
 		}
 		else if (MobileMeltdown.IsAutoPatternMode())
 		{
-			EVERY_N_SECONDS(30)
+			EVERY_N_SECONDS(20)
 			{
 				// If we've reached the limit of modes for this pattern, get the next pattern.
 				if (MobileMeltdown.GetModeNumber() >= MobileMeltdown.GetNumModes())
@@ -229,8 +224,8 @@ namespace Meltdown
 	void executeSetup()
 	{
 		// initialize serial communication at 9600 bits per second:
-		//Serial.begin(9600);
-		//Serial1.begin(9600);
+		Serial.begin(9600);
+		Serial1.begin(9600);
 
 		Serial.println("Serial port opened.");
 
@@ -239,10 +234,6 @@ namespace Meltdown
 		MobileMeltdown.InitTimers();
 
 		delay(3000);
-
-		FastLED.addLeds<LED_TYPE, LED_PIN, RGB_ORDER>(leds, NUM_LEDS);
-
-		LEDS.setBrightness(110);
 
 		setupButtons();
 
@@ -256,6 +247,10 @@ namespace Meltdown
 		initPattern();
 		initMode();
 		initEffect();
+
+		FastLED.addLeds<LED_TYPE, gDataPin, gOrder>(leds, gNumLedsPerStrip * gNumStrips);
+
+		LEDS.setBrightness(gBrightness);
 	}
 
 	void executeLoop()
