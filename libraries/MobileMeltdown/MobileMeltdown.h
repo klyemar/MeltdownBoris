@@ -68,15 +68,16 @@ namespace Meltdown
 		  MeltdownPattern gPatterns[9] = {
 			  //{ 10, &CMobileMeltdown::SolidColors },
 			  //{ 3, &CMobileMeltdown::RainbowFull },
-			  { 4, &CMobileMeltdown::BlendColor },
-			  { 3, &CMobileMeltdown::Orbital },
-			  { 3, &CMobileMeltdown::Confetti },
-			  { 3, &CMobileMeltdown::Juggle },
-			  { 4, &CMobileMeltdown::RunningLights },
+
 			  { 4, &CMobileMeltdown::Sinelon },
-			  { 2, &CMobileMeltdown::MeteorRain },
-			  { 2, &CMobileMeltdown::Rainbow },
 			  { 3, &CMobileMeltdown::Bpm },
+			  { 2, &CMobileMeltdown::MeteorRain },
+			  { 3, &CMobileMeltdown::Orbital },
+			  { 2, &CMobileMeltdown::Rainbow },
+			  { 4, &CMobileMeltdown::RunningLights },
+			  { 3, &CMobileMeltdown::Juggle },
+			  { 3, &CMobileMeltdown::Confetti },
+			  { 4, &CMobileMeltdown::BlendColor },
 		  };
 
 		  // List of effects to cycle through.  Each is defined as a separate function below.
@@ -557,7 +558,7 @@ namespace Meltdown
 			  pos = pos % numLeds;
 
 			  // Get the appropriate color from the palette, mapped to the number of LEDs.
-			  int mappedPos = numPaletteColors / numLeds * pos;
+			  int mappedPos = map(pos, 0, numLeds, 0, numPaletteColors);
 			  if (isReverse)
 			  {
 				  return ColorFromPalette(palette, (numPaletteColors - mappedPos), brightness, blendType);
@@ -573,7 +574,7 @@ namespace Meltdown
 			  for (int i = 0; i < gNumLeds; i++)
 			  {
 				  int scale = 255 - fade;
-				  (leds[i]).nscale8(scale);
+				  leds[i].nscale8(scale);
 			  }
 		  }
 
@@ -810,10 +811,10 @@ namespace Meltdown
 			  // The speed to shift the position.
 			  float posMultiplier = .4;
 			  // The pixel values.
-			  int space = 20;
-			  int width = 4;
+			  int space = 40;
+			  int width = 8;
 			  // Fade value.
-			  int fade = 48;
+			  int fade = 36;
 
 			  FadeSetsToBlackBy(leds, fade);
 

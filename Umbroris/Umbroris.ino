@@ -14,16 +14,16 @@ namespace Meltdown
 #define DEBUG true
 
 	// Circle Lamp
-//#define LED_TYPE WS2812B 
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 93; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB; 
+#define LED_TYPE WS2812B 
+	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 92; const int gNumStrips = 3; const int gBrightness = 50; const EOrder gOrder = GRB; 
 
 	// Neon Light
 //#define LED_TYPE WS2811 
-	//const uint8_t gDataPin = 11; const int gNumLedsPerStrip = 20; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrdergOrder = RGB; 
+	//const uint8_t gDataPin = 11; const int gNumLedsPerStrip = 20; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; 
 
 	// Christmas Bulbs
-#define LED_TYPE WS2812B 
-	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 50; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
+//#define LED_TYPE WS2812B 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 50; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
 
 	// Christmas Bulbs XL
 //#define LED_TYPE WS2812B 
@@ -38,8 +38,10 @@ namespace Meltdown
 	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 34; const int gNumStrips = 8; const int gBrightness = 110; const EOrder gOrder = GRB; 
 
 	// Arbitrary Config
-//#define LED_TYPE WS2812B 
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 425; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; 
+//#define LED_TYPE WS2812B
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 425; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; // Front window lights
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 300; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; // Office lights
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 53; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; // Display case lights
 
 #define BUTTON_PIN_1 2
 #define BUTTON_PIN_2 3
@@ -225,7 +227,7 @@ namespace Meltdown
 	{
 		// initialize serial communication at 9600 bits per second:
 		Serial.begin(9600);
-		Serial1.begin(9600);
+		//Serial1.begin(9600);
 
 		Serial.println("Serial port opened.");
 
