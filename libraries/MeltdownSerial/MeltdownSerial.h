@@ -118,11 +118,10 @@ namespace Meltdown
 			const String EFFECT = "EFCT";
 			const String MODE = "MODE";
 			const String BRIGHTNESS = "BRIT";
-			const String HUE1 = "HUE1";
-			const String HUE2 = "HUE2";
-			const String HUE3 = "HUE3";
-			const String HUE4 = "HUE4";
-			const String HUE5 = "HUE5";
+			const String FULL_PURPLE = "PRPL";
+			const String FULL_YELLOW = "YLLW";
+			const String FULL_BLUE = "BLUE";
+			const String FULL_GREEN = "GREN";
 			const String MIRROR = "MIRR";
 			const String TOP = "TOPP";
 			const String BOTTOM = "BOTP";
