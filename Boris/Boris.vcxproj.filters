@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Boris.ino" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="__vm\.Boris.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -33,5 +30,8 @@
     <ClInclude Include="..\libraries\FastLED\FastLED.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Boris.ino" />
   </ItemGroup>
 </Project>

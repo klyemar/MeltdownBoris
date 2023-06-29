@@ -19,10 +19,10 @@ namespace Meltdown
 #define LED_TYPE OCTOWS2811
 
 #define NUM_PENTS 5
-#define NUM_STRIPS_PER_PENT 1
+#define NUM_STRIPS_PER_PENT 5
 
-#define NUM_WHEEL_LEDS_PER_STRIP 150
-#define NUM_SPOKE_LEDS_PER_STRIP 150
+#define NUM_WHEEL_LEDS_PER_STRIP 69	
+#define NUM_SPOKE_LEDS_PER_STRIP 60
 #define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
 #define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
@@ -195,21 +195,37 @@ namespace Meltdown
 				{
 					MeltdownLED.SetBrightness(-1);
 				}
-				else if (command.equals(MeltdownSerial.FULL_PURPLE))
+				else if (command.equals(MeltdownSerial.ENABLE_FULL_PURPLE))
 				{
-					MeltdownLED.SetFullPurple();
+					MeltdownLED.EnableFullPurple();
 				}
-				else if (command.equals(MeltdownSerial.FULL_YELLOW))
+				else if (command.equals(MeltdownSerial.DISABLE_FULL_PURPLE))
 				{
-					MeltdownLED.SetFullYellow();
+					MeltdownLED.DisableFullPurple();
 				}
-				else if (command.equals(MeltdownSerial.FULL_BLUE))
+				else if (command.equals(MeltdownSerial.ENABLE_FULL_YELLOW))
 				{
-					MeltdownLED.SetFullBlue();
+					MeltdownLED.EnableFullYellow();
 				}
-				else if (command.equals(MeltdownSerial.FULL_GREEN))
+				else if (command.equals(MeltdownSerial.DISABLE_FULL_YELLOW))
 				{
-					MeltdownLED.SetFullGreen();
+					MeltdownLED.DisableFullYellow();
+				}
+				else if (command.equals(MeltdownSerial.ENABLE_FULL_RAINBOW))
+				{
+					MeltdownLED.EnableFullRainbow();
+				}
+				else if (command.equals(MeltdownSerial.DISABLE_FULL_RAINBOW))
+				{
+					MeltdownLED.DisableFullRainbow();
+				}
+				else if (command.equals(MeltdownSerial.ENABLE_FULL_GREEN))
+				{
+					MeltdownLED.EnableFullGreen();
+				}
+				else if (command.equals(MeltdownSerial.DISABLE_FULL_GREEN))
+				{
+					MeltdownLED.DisableFullGreen();
 				}
 				else if (command.equals(MeltdownSerial.PAUSE))
 				{
@@ -343,9 +359,15 @@ namespace Meltdown
 		{
 			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Yellow);
 		}
-		else if (MeltdownLED.GetFullBlue())
+		else if (MeltdownLED.GetFullRainbow())
 		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Blue);
+			static int hue = 1;
+			// slowly cycle through hue
+			EVERY_N_MILLIS(50) {
+				hue++;
+			}
+
+			MeltdownLED.FillRainbow(leds, ledIndexes, numLeds, hue, 0);
 		}
 		else if (MeltdownLED.GetFullGreen())
 		{
@@ -374,9 +396,15 @@ namespace Meltdown
 		{
 			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Yellow);
 		}
-		else if (MeltdownLED.GetFullBlue())
+		else if (MeltdownLED.GetFullRainbow())
 		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Blue);
+			static int hue = 100;
+			// slowly cycle through hue
+			EVERY_N_MILLIS(50) {
+				hue++;
+			}
+
+			MeltdownLED.FillRainbow(leds, ledIndexes, numLeds, hue, 0);
 		}
 		else if (MeltdownLED.GetFullGreen())
 		{

@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="BorisInput.ino" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="__vm\.BorisInput.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -30,5 +27,8 @@
     <ClInclude Include="..\libraries\MeltdownSerial\MeltdownSerial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BorisInput.ino" />
   </ItemGroup>
 </Project>

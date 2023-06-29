@@ -15,7 +15,10 @@ namespace Meltdown
 
 	// Circle Lamp
 #define LED_TYPE WS2812B 
-	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 92; const int gNumStrips = 3; const int gBrightness = 50; const EOrder gOrder = GRB; 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 92; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB;
+	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 60; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB;
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 241; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB;
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 36; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB; 
 
 	// Neon Light
 //#define LED_TYPE WS2811 
@@ -25,9 +28,9 @@ namespace Meltdown
 //#define LED_TYPE WS2812B 
 	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 50; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
 
-	// Christmas Bulbs XL
+//	// Christmas Bulbs XL
 //#define LED_TYPE WS2812B 
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 100; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
+//	const uint8_t gDataPin = 11; const int gNumLedsPerStrip = 90; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
 
 	// Umbrella
 //#define LED_TYPE WS2812B 
@@ -79,7 +82,10 @@ namespace Meltdown
 
 	void initPattern()
 	{
-		MobileMeltdown.SetPatternNumber(0);
+		// set a random index for some surprise, man
+		int patternOffset = random8(0, MobileMeltdown.GetNumPatterns());
+
+		MobileMeltdown.SetPatternNumber(patternOffset);
 		MeltdownLogger.Debug(Serial, "Initializing Pattern...");
 	}
 
