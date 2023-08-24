@@ -39,7 +39,7 @@ namespace Meltdown
 #define PURPLE_PIN BUTTON_PIN_4
 #define YELLOW_PIN BUTTON_PIN_5
 #define BLACK_PIN BUTTON_PIN_9
-#define RAINBOW_PIN BUTTON_PIN_10
+#define BLUE_PIN BUTTON_PIN_10
 #define MIRROR_PIN BUTTON_PIN_11
 #define EFFECT_PIN BUTTON_PIN_6
 #define BOTTOM_PIN BUTTON_PIN_7
@@ -50,7 +50,7 @@ namespace Meltdown
 
 #define CODE_INIT_PIN PAUSE_PIN
 #define CODE_PIN_1 BLACK_PIN
-#define CODE_PIN_2 RAINBOW_PIN
+#define CODE_PIN_2 BLUE_PIN
 #define CODE_PIN_3 YELLOW_PIN
 #define CODE_PIN_4 PURPLE_PIN
 
@@ -80,10 +80,9 @@ namespace Meltdown
 		int state;
 		int previousState;
 		bool isToggle;
-		void(*pressedCallback)();
-		void(*depressedCallback)();
+		void(*callback)();
 
-		Button(int pin) : pin(pin), state{ HIGH }, previousState{ HIGH }, isToggle{ false }, depressedCallback{NULL}
+		Button(int pin) : pin(pin), state{ HIGH }, previousState{ HIGH }, isToggle{ false }
 		{}
 	};
 
@@ -94,7 +93,7 @@ namespace Meltdown
 	Button bottomButton = { BOTTOM_PIN };
 	Button purpleButton = { PURPLE_PIN };
 	Button yellowButton = { YELLOW_PIN };
-	Button rainbowButton = { RAINBOW_PIN };
+	Button blueButton = { BLUE_PIN };
 	Button blackButton = { BLACK_PIN };
 	Button mirrorButton = { MIRROR_PIN };
 	Button pauseButton = { PAUSE_PIN };
@@ -414,68 +413,36 @@ namespace Meltdown
 		}
 	}
 
-	void enableFullPurple()
+	void toggleFullPurple()
 	{
-		bool val = MeltdownLED.EnableFullPurple();
+		bool val = MeltdownLED.ToggleFullPurple();
 
-		MeltdownLogger.Debug(Serial, "Enabling Full Purple", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ENABLE_FULL_PURPLE, val);
+		MeltdownLogger.Debug(Serial, "Setting Full Purple", val);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_PURPLE, val);
 	}
 
-	void disableFullPurple()
+	void toggleFullYellow()
 	{
-		bool val = MeltdownLED.DisableFullPurple();
+		bool val = MeltdownLED.ToggleFullYellow();
 
-		MeltdownLogger.Debug(Serial, "Disabling Full Purple", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.DISABLE_FULL_PURPLE, val);
+		MeltdownLogger.Debug(Serial, "Setting Full Yellow", val);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_YELLOW, val);
 	}
 
-	void enableFullYellow()
+	void toggleFullBlue()
 	{
-		bool val = MeltdownLED.EnableFullYellow();
+		bool val = MeltdownLED.ToggleFullBlue();
 
-		MeltdownLogger.Debug(Serial, "Enabling Full Yellow", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ENABLE_FULL_YELLOW, val);
+		MeltdownLogger.Debug(Serial, "Setting Full Blue", val);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_BLUE, val);
 	}
 
-	void disableFullYellow()
+	void toggleFullGreen()
 	{
-		bool val = MeltdownLED.DisableFullYellow();
+		bool val = MeltdownLED.ToggleFullGreen();
 
-		MeltdownLogger.Debug(Serial, "Disabling Full Yellow", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.DISABLE_FULL_YELLOW, val);
-	}
-
-	void enableFullRainbow()
-	{
-		bool val = MeltdownLED.EnableFullRainbow();
-
-		MeltdownLogger.Debug(Serial, "Enabling Full Rainbow", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ENABLE_FULL_RAINBOW, val);
-	}
-
-	void disableFullRainbow()
-	{
-		bool val = MeltdownLED.DisableFullRainbow();
-
-		MeltdownLogger.Debug(Serial, "Disabling Full Rainbow", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.DISABLE_FULL_RAINBOW, val);
-	}
-
-	void enableFullGreen()
-	{
-		bool val = MeltdownLED.EnableFullGreen();
-
-		MeltdownLogger.Debug(Serial, "Enabling Full Green", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.ENABLE_FULL_GREEN, val);
-	}
-
-	void disableFullGreen()
-	{
-		bool val = MeltdownLED.DisableFullGreen();
-
-		MeltdownLogger.Debug(Serial, "Disabling Full Green", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.DISABLE_FULL_GREEN, val);
+		MeltdownLogger.Debug(Serial, "Setting Full Green", val);
+		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_GREEN, val);
 	}
 
 	void toggleBlack() 
@@ -603,7 +570,7 @@ namespace Meltdown
 					// This is awkward, but for now if this is the first that the code button has been pressed, we must activate it here.
 					if (!MeltdownLED.GetAutoModeActive())
 					{
-						button->pressedCallback();
+						button->callback();
 					}
 					else
 					{
@@ -616,7 +583,7 @@ namespace Meltdown
 				// If auto mode is not active, call the button callback. Otherwise, deactivate auto mode.
 				if (!MeltdownLED.GetAutoModeActive())
 				{
-					button->pressedCallback();
+					button->callback();
 				}
 				else
 				{
@@ -636,7 +603,7 @@ namespace Meltdown
 				{
 					resetButtonCode();
 
-					button->pressedCallback();
+					button->callback();
 				}
 				else
 				{
@@ -645,14 +612,7 @@ namespace Meltdown
 					{
 						if (!button->isToggle)
 						{
-							if (button->depressedCallback != NULL)
-							{
-								button->depressedCallback();
-							}
-							else
-							{
-								button->pressedCallback();
-							}
+							button->callback();
 						}
 					}
 					else
@@ -679,7 +639,7 @@ namespace Meltdown
 			checkButtonState(&purpleButton);
 			checkButtonState(&yellowButton);
 			checkButtonState(&blackButton);
-			checkButtonState(&rainbowButton);
+			checkButtonState(&blueButton);
 			checkButtonState(&mirrorButton);
 		}
 	}
@@ -688,25 +648,21 @@ namespace Meltdown
 
 	void setupButtons()
 	{
-		patternButton.pressedCallback = nextPattern;
+		patternButton.callback = nextPattern;
 		patternButton.isToggle = true;
-		effectButton.pressedCallback = nextEffect;
+		effectButton.callback = nextEffect;
 		effectButton.isToggle = true;
-		modeButton.pressedCallback = nextMode;
+		modeButton.callback = nextMode;
 		modeButton.isToggle = true;
 
-		topButton.pressedCallback = setTopPosition;
-		bottomButton.pressedCallback = setBottomPosition;
-		bottomButton.pressedCallback = setBottomPosition;
-		mirrorButton.pressedCallback = toggleMirror;
-		purpleButton.pressedCallback = enableFullPurple;
-		purpleButton.depressedCallback = disableFullPurple;
-		yellowButton.pressedCallback = enableFullYellow;
-		yellowButton.depressedCallback = disableFullYellow;
-		rainbowButton.pressedCallback = enableFullRainbow;
-		rainbowButton.depressedCallback = disableFullRainbow;
-		blackButton.pressedCallback = toggleBlack;
-		pauseButton.pressedCallback = togglePause;
+		topButton.callback = setTopPosition;
+		bottomButton.callback = setBottomPosition;
+		mirrorButton.callback = toggleMirror;
+		purpleButton.callback = toggleFullPurple;
+		yellowButton.callback = toggleFullYellow;
+		blueButton.callback = toggleFullBlue;
+		blackButton.callback = toggleBlack;
+		pauseButton.callback = togglePause;
 	}
 
 	void setupLedIndexes()

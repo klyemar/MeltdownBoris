@@ -27,20 +27,23 @@
 #include <Arduino.h>
 #include "DMAChannel.h"
 
-#if TEENSYDUINO < 120
-#error "Teensyduino version 1.20 or later is required to compile this library."
+#if TEENSYDUINO < 121
+#error "Teensyduino version 1.21 or later is required to compile this library."
 #endif
 #ifdef __AVR__
-#error "The Audio Library only works with Teensy 3.X.  Teensy 2.0 is unsupported."
+#error "OctoWS2811 does not work with Teensy 2.0 or Teensy++ 2.0."
 #endif
 
 #define WS2811_RGB	0	// The WS2811 datasheet documents this way
 #define WS2811_RBG	1
 #define WS2811_GRB	2	// Most LED strips are wired this way
 #define WS2811_GBR	3
+#define WS2811_BRG	4
+#define WS2811_BGR	5
 
 #define WS2811_800kHz 0x00	// Nearly all WS2811 are 800 kHz
 #define WS2811_400kHz 0x10	// Adafruit's Flora Pixels
+#define WS2813_800kHz 0x20	// WS2813 are close to 800 kHz but has 300 us frame set delay
 
 
 class OctoWS2811 {
@@ -63,7 +66,7 @@ public:
 	int color(uint8_t red, uint8_t green, uint8_t blue) {
 		return (red << 16) | (green << 8) | blue;
 	}
-	
+
 
 private:
 	static uint16_t stripLen;

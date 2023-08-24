@@ -64,7 +64,7 @@ namespace Meltdown
 		  // The number of minutes after which auto mode should begin.
 		  const unsigned long gAutoModePeriod = 1000L * 60 * 30; // 30 minutes
 
-		  // List of patterns to cycle through.  Each is defined as a separate function below.
+		// List of patterns to cycle through.  Each is defined as a separate function below.
 		  MeltdownPattern gPatterns[9] = {
 			  //{ 10, &CMobileMeltdown::SolidColors },
 			  //{ 3, &CMobileMeltdown::RainbowFull },
@@ -463,7 +463,7 @@ namespace Meltdown
 				  if (random < 255 * frequency)
 				  {
 					  //leds[random16(gNumLeds)] = CHSV(gHue + random8(hueOffsetMin, hueOffsetMax), 200, 255);
-					  leds[random16(gNumLeds)] = color;
+					  leds[random16(gNumLeds)] = CRGB(color);
 				  }
 			  }
 		  }
@@ -607,11 +607,6 @@ namespace Meltdown
 			  return gCurrentPatternNumber % ARRAY_SIZE(gPatterns);
 		  }
 
-		  int GetNumPatterns()
-		  {
-			  return ARRAY_SIZE(gPatterns);
-		  }
-
 		  int SetPatternNumber(int number)
 		  {
 			  ResetFrame();
@@ -679,40 +674,18 @@ namespace Meltdown
 			  int speed = beatsin8(48, 128, 255);
 
 			  // Modes
-			  HalloweenFillGradients(leds, GetModeNumber(), speed);
+			  HalloweenFillGradients(leds, GetModeNumber() + 3, speed);
 		  }
 
 		  void HalloweenFillGradients(CRGB leds[], int numGradients, int speed)
 		  {
-			  if (numGradients < 3) numGradients = 3;
+			  if (numGradients < 4) numGradients = 4;
 
 			  for (int i = 0; i < numGradients; i++)
 			  {
-				  CRGB color1;
-				  CRGB color2;
-				  CRGB color3;
-
-				  switch (GetModeNumber())
-				  {
-				  case 1: 
-					  // Purple
-					  color1 = CRGB(117, 0, 255);
-					  color2 = CRGB(90, 0, 138);
-					  color3 = CRGB(30, 0, 90);
-					  break;
-				  case 2:
-					  // Green
-					  color1 = CRGB(130, 255, 0);
-					  color2 = CRGB(20, 150, 0);
-					  color3 = CRGB(100, 255, 0);
-					  break;
-				  default:
-					  // Orange
-					  color1 = CRGB(255, 120, 0);
-					  color2 = CRGB(255, 40, 0);
-					  color3 = CRGB(255, 80, 0);
-					  break;
-				  }
+				  CRGB color1 = CRGB(117, 0, 255);
+				  CRGB color2 = CRGB(90, 0, 138);
+				  CRGB color3 = CRGB(30, 0, 90);
 
 				  // Blend between two different colors over time.
 				  CRGB blend1 = blend(color1, color2, speed);
@@ -857,24 +830,25 @@ namespace Meltdown
 			  counter++;
 		  }
 
-		  void HalloweenConfetti(CRGB leds[])
-		  {
-			  FadeSetsToBlackBy(leds, 15);
+		  //void HalloweenConfetti(CRGB leds[])
+		  //{
+			 // int fade = GetAnalogPattern(2, 30);
+			 // FadeSetsToBlackBy(leds, fade);
 
-			  // Modes
-			  switch (GetModeNumber())
-			  {
-			  case 1:
-				  SetRandomColor(leds, CRGB::Purple, 1, .8);	// Purple
-				  break;
-			  case 2:
-				  SetRandomColor(leds, CRGB(80, 255, 0), 1, .4);	// Green	
-				  break;
-			  default:
-				  SetRandomColor(leds, CRGB(255, 80, 0), 1, .4);	// Orange
-				  break;
-			  }
-		  }
+			 // // Modes
+			 // switch (GetModeNumber())
+			 // {
+			 // case 1:
+				//  SetRandomColor(leds, 6, 38, .8);	// Orange
+				//  break;
+			 // case 2:
+				//  SetRandomColor(leds, 3, 86, .8);	// Green	
+				//  break;
+			 // default:
+				//  SetRandomColor(leds, 5, 230, .8);	// Purple
+				//  break;
+			 // }
+		  //}
 
 		  void Sinelon(CRGB leds[])
 		  {
@@ -888,13 +862,13 @@ namespace Meltdown
 
 		  void Bpm(CRGB leds[])
 		  {
-			  int bpm = 12;
-			  int beat = beatsin8(bpm, 64, 255);
+			  int bpm = 60;
+			  int beat = beatsin8(bpm, 0, 255);
 			  PaletteData paletteData = GetRandomPalette();
 
 			  for (int i = 0; i < gNumLeds; i++)
 			  {
-				  leds[i] = ColorGradientFromPalette(paletteData.palette, gNumLeds, i + GetFrameOffset(.15), beat - (i * 5), paletteData.blendType);
+				  leds[i] = ColorGradientFromPalette(paletteData.palette, gNumLeds, i + GetFrameOffset(.35), beat - (i * 10), paletteData.blendType);
 			  }
 		  }
 
