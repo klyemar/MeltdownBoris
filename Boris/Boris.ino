@@ -1,4 +1,5 @@
 #define USE_OCTOWS2811
+
 #include <OctoWS2811.h>
 #include <FastLED.h>
 #include <MeltdownLED.h>
@@ -18,11 +19,11 @@ namespace Meltdown
 
 #define LED_TYPE OCTOWS2811
 
-#define NUM_PENTS 5
+#define NUM_PENTS 1
 #define NUM_STRIPS_PER_PENT 1
 
-#define NUM_WHEEL_LEDS_PER_STRIP 150
-#define NUM_SPOKE_LEDS_PER_STRIP 150
+#define NUM_WHEEL_LEDS_PER_STRIP 299
+#define NUM_SPOKE_LEDS_PER_STRIP 1
 #define NUM_LEDS_PER_STRIP (NUM_WHEEL_LEDS_PER_STRIP + NUM_SPOKE_LEDS_PER_STRIP)
 #define NUM_WHEEL_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_WHEEL_LEDS_PER_STRIP)
 #define NUM_SPOKE_LEDS_PER_PENT (NUM_STRIPS_PER_PENT * NUM_SPOKE_LEDS_PER_STRIP)
@@ -195,21 +196,30 @@ namespace Meltdown
 				{
 					MeltdownLED.SetBrightness(-1);
 				}
-				else if (command.equals(MeltdownSerial.FULL_PURPLE))
+				else if (command.equals(MeltdownSerial.HUE1))
 				{
-					MeltdownLED.SetFullPurple();
+					bool hueValue = MeltdownLED.ToggleHue(1);
+					MeltdownLogger.Debug(Serial, F("Toggling Hue"), hueValue);
 				}
-				else if (command.equals(MeltdownSerial.FULL_YELLOW))
+				else if (command.equals(MeltdownSerial.HUE2))
 				{
-					MeltdownLED.SetFullYellow();
+					bool hueValue = MeltdownLED.ToggleHue(2);
+					MeltdownLogger.Debug(Serial, F("Toggling Hue"), hueValue);
 				}
-				else if (command.equals(MeltdownSerial.FULL_BLUE))
+				else if (command.equals(MeltdownSerial.HUE3))
 				{
-					MeltdownLED.SetFullBlue();
+					bool hueValue = MeltdownLED.ToggleHue(3);
+					MeltdownLogger.Debug(Serial, F("Toggling Hue"), hueValue);
 				}
-				else if (command.equals(MeltdownSerial.FULL_GREEN))
+				else if (command.equals(MeltdownSerial.HUE4))
 				{
-					MeltdownLED.SetFullGreen();
+					bool hueValue = MeltdownLED.ToggleHue(4);
+					MeltdownLogger.Debug(Serial, F("Toggling Hue"), hueValue);
+				}
+				else if (command.equals(MeltdownSerial.HUE5))
+				{
+					bool hueValue = MeltdownLED.ToggleHue(5);
+					MeltdownLogger.Debug(Serial, F("Toggling Hue"), hueValue);
 				}
 				else if (command.equals(MeltdownSerial.PAUSE))
 				{
@@ -333,23 +343,8 @@ namespace Meltdown
 	{
 		if (MeltdownLED.GetBottom())
 		{
+			// Call the current pattern function once, updating the 'leds' array.
 			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Black);
-		}
-		else if (MeltdownLED.GetFullPurple())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Purple);
-		}
-		else if (MeltdownLED.GetFullYellow())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Yellow);
-		}
-		else if (MeltdownLED.GetFullBlue())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Blue);
-		}
-		else if (MeltdownLED.GetFullGreen())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Green);
 		}
 		else
 		{
@@ -365,22 +360,6 @@ namespace Meltdown
 		{
 			// Call the current pattern function once, updating the 'leds' array.
 			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Black);
-		}
-		else if (MeltdownLED.GetFullPurple())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Purple);
-		}
-		else if (MeltdownLED.GetFullYellow())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Yellow);
-		}
-		else if (MeltdownLED.GetFullBlue())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Blue);
-		}
-		else if (MeltdownLED.GetFullGreen())
-		{
-			MeltdownLED.SetAllColor(leds, ledIndexes, numLeds, CRGB::Green);
 		}
 		else
 		{

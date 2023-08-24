@@ -36,10 +36,10 @@ namespace Meltdown
 #define PATTERN_PIN BUTTON_PIN_1
 #define PAUSE_PIN BUTTON_PIN_2
 #define MODE_PIN BUTTON_PIN_3
-#define PURPLE_PIN BUTTON_PIN_4
-#define YELLOW_PIN BUTTON_PIN_5
+#define HUE1_PIN BUTTON_PIN_4
+#define HUE2_PIN BUTTON_PIN_5
 #define BLACK_PIN BUTTON_PIN_9
-#define BLUE_PIN BUTTON_PIN_10
+#define HUE3_PIN BUTTON_PIN_10
 #define MIRROR_PIN BUTTON_PIN_11
 #define EFFECT_PIN BUTTON_PIN_6
 #define BOTTOM_PIN BUTTON_PIN_7
@@ -50,9 +50,9 @@ namespace Meltdown
 
 #define CODE_INIT_PIN PAUSE_PIN
 #define CODE_PIN_1 BLACK_PIN
-#define CODE_PIN_2 BLUE_PIN
-#define CODE_PIN_3 YELLOW_PIN
-#define CODE_PIN_4 PURPLE_PIN
+#define CODE_PIN_2 HUE3_PIN
+#define CODE_PIN_3 HUE2_PIN
+#define CODE_PIN_4 HUE1_PIN
 
 #define NUM_LEDS_PER_MED_RING 16
 #define NUM_LEDS_PER_LARGE_RING 24
@@ -91,9 +91,9 @@ namespace Meltdown
 	Button modeButton = { MODE_PIN };
 	Button topButton = { TOP_PIN };
 	Button bottomButton = { BOTTOM_PIN };
-	Button purpleButton = { PURPLE_PIN };
-	Button yellowButton = { YELLOW_PIN };
-	Button blueButton = { BLUE_PIN };
+	Button hue1Button = { HUE1_PIN };
+	Button hue2Button = { HUE2_PIN };
+	Button hue3Button = { HUE3_PIN };
 	Button blackButton = { BLACK_PIN };
 	Button mirrorButton = { MIRROR_PIN };
 	Button pauseButton = { PAUSE_PIN };
@@ -413,37 +413,17 @@ namespace Meltdown
 		}
 	}
 
-	void toggleFullPurple()
+	void toggleHue(int index, String command)
 	{
-		bool val = MeltdownLED.ToggleFullPurple();
+		bool hueValue = MeltdownLED.ToggleHue(index);
 
-		MeltdownLogger.Debug(Serial, "Setting Full Purple", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_PURPLE, val);
+		MeltdownLogger.Debug(Serial, "Toggling Hue", command);
+		MeltdownSerial.SendCommand(Serial, Serial1, command, hueValue);
 	}
 
-	void toggleFullYellow()
-	{
-		bool val = MeltdownLED.ToggleFullYellow();
-
-		MeltdownLogger.Debug(Serial, "Setting Full Yellow", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_YELLOW, val);
-	}
-
-	void toggleFullBlue()
-	{
-		bool val = MeltdownLED.ToggleFullBlue();
-
-		MeltdownLogger.Debug(Serial, "Setting Full Blue", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_BLUE, val);
-	}
-
-	void toggleFullGreen()
-	{
-		bool val = MeltdownLED.ToggleFullGreen();
-
-		MeltdownLogger.Debug(Serial, "Setting Full Green", val);
-		MeltdownSerial.SendCommand(Serial, Serial1, MeltdownSerial.FULL_GREEN, val);
-	}
+	void toggleHue1() { toggleHue(1, MeltdownSerial.HUE1); }
+	void toggleHue2() { toggleHue(2, MeltdownSerial.HUE2); }
+	void toggleHue3() { toggleHue(3, MeltdownSerial.HUE3); }
 
 	void toggleBlack() 
 	{
@@ -636,10 +616,10 @@ namespace Meltdown
 			checkButtonState(&pauseButton);
 			checkButtonState(&topButton);
 			checkButtonState(&bottomButton);
-			checkButtonState(&purpleButton);
-			checkButtonState(&yellowButton);
+			checkButtonState(&hue1Button);
+			checkButtonState(&hue2Button);
 			checkButtonState(&blackButton);
-			checkButtonState(&blueButton);
+			checkButtonState(&hue3Button);
 			checkButtonState(&mirrorButton);
 		}
 	}
@@ -654,13 +634,15 @@ namespace Meltdown
 		effectButton.isToggle = true;
 		modeButton.callback = nextMode;
 		modeButton.isToggle = true;
+		hue1Button.callback = toggleHue1;
+		hue1Button.isToggle = true;
+		hue2Button.callback = toggleHue2;
+		hue2Button.isToggle = true;
 
 		topButton.callback = setTopPosition;
 		bottomButton.callback = setBottomPosition;
 		mirrorButton.callback = toggleMirror;
-		purpleButton.callback = toggleFullPurple;
-		yellowButton.callback = toggleFullYellow;
-		blueButton.callback = toggleFullBlue;
+		hue3Button.callback = toggleHue3;
 		blackButton.callback = toggleBlack;
 		pauseButton.callback = togglePause;
 	}
