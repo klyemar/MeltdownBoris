@@ -35,34 +35,30 @@ namespace Meltdown
 		  int gNumLeds = 0;
 
 		  int gCurrentPatternNumber = 0;
-		  int gCurrentEffectNumber = 0;
+		  int gCurrentEffectNumber = 0; 
 		  int gCurrentModeNumber = 0;
 
 		  // Palette values, to be honest this is kind of hacky for now... I dunno... TODO!!!
 		  int gLastRandomPaletteNumber = 0;
 		  int gRandomPaletteNumber = 0;
 
-		  int gBrightness = 48;
 		  int gHue = 0;
 		  int gDelay = 0;
 		  long gAnalogPattern = 0;
-		  long gAnalogEffect = 0;
 		  long gPos = 0;
 		  long gFade = 20;
 		  long gFrame = 1;
 		  int gFrameStep = 1;
 		  bool gInverse = false;
 		  bool gGlitter = false;
+		  bool gSolidColor = false;
 		  bool gAutoModeActive = false;
-
-		  enum AutoMode { None, Sleep, Pattern, Mode, PatternMode };
-		  AutoMode gAutoMode = None;
 
 		  unsigned long gCurrentMillis;
 		  // The millis at the time that the auto mode timer started.
 		  unsigned long gAutoModeStartMillis;
 		  // The number of minutes after which auto mode should begin.
-		  const unsigned long gAutoModePeriod = 1000L * 60 * 30; // 30 minutes
+		  const unsigned long gAutoModePeriod = 1000L * 60 * 15; // 15 minutes
 
 		// List of patterns to cycle through.  Each is defined as a separate function below.
 		  MeltdownPattern gPatterns[9] = {
@@ -87,13 +83,6 @@ namespace Meltdown
 			  &CMobileMeltdown::GlitterEffect
 		  };
 
-		  // CONFIGURATION //
-
-		  void SetNumLeds(int numLeds)
-		  {
-			  gNumLeds = numLeds;
-		  }
-
 		  // ANALOG //
 
 		  int SetAnalogPattern(int pin)
@@ -105,28 +94,6 @@ namespace Meltdown
 
 		  int GetAnalogPattern(int minVal, int maxVal) { return mapFloat(gAnalogPattern, 0, 1023, minVal, maxVal); }
 
-		  int SetAnalogEffect(int pin)
-		  {
-			  gAnalogEffect = MeltdownSerial.GetAnalogValue(pin, gAnalogEffect);
-			  return gAnalogEffect;
-		  }
-		  int GetAnalogEffect() { return gAnalogEffect; }
-
-		  int GetAnalogEffect(int minVal, int maxVal) { return map(gAnalogEffect, 0, 1023, minVal, maxVal); }
-
-		  // BRIGHTNESS //
-
-		  int SetBrightness(int pin)
-		  {
-			  gBrightness = MeltdownSerial.GetAnalogValue(pin, gBrightness);
-			  LEDS.setBrightness(gBrightness);
-
-			  return gBrightness;
-		  }
-		  int GetBrightness() { return gBrightness; }
-
-		  int GetBrightness(int minVal, int maxVal) { return map(gBrightness, 0, 1023, minVal, maxVal); }
-
 		  // DELAY //
 
 		  int GetDelay() { return gDelay; }
@@ -134,62 +101,6 @@ namespace Meltdown
 		  void ResetDelay() { gDelay = 0; }
 
 		  // AUTO MODE //
-
-		  void SetAutoMode(AutoMode mode)
-		  {
-			  gAutoMode = mode;
-
-			  if (mode == None)
-			  {
-				  SetAutoModeActive(false);
-			  }
-			  else
-			  {
-				  SetAutoModeActive(true);
-			  }
-		  }
-		  void SetAutoMode()
-		  {
-			  String mode = MeltdownSerial.GetCommand();
-
-			  if (mode == MeltdownSerial.AUTO_SLEEP)
-			  {
-				  gAutoMode = Sleep;
-				  SetAutoModeActive(true);
-			  }
-			  else if (mode == MeltdownSerial.AUTO_PATTERN)
-			  {
-				  gAutoMode = Pattern;
-				  SetAutoModeActive(true);
-			  }
-			  else if (mode == MeltdownSerial.AUTO_MODE)
-			  {
-				  gAutoMode = Mode;
-				  SetAutoModeActive(true);
-			  }
-			  else if (mode == MeltdownSerial.AUTO_PATTERN_MODE)
-			  {
-				  gAutoMode = PatternMode;
-				  SetAutoModeActive(true);
-			  }
-			  else
-			  {
-				  gAutoMode = None;
-				  SetAutoModeActive(false);
-			  }
-		  }
-
-		  AutoMode GetAutoMode() { return gAutoMode; }
-
-		  bool GetAutoModeEnabled() { return gAutoMode != None; }
-
-		  bool IsAutoPattern() { return gAutoMode == Pattern; }
-
-		  bool IsAutoMode() { return gAutoMode == Mode; }
-
-		  bool IsAutoPatternMode() { return gAutoMode == PatternMode; }
-
-		  bool IsAutoSleep() { return gAutoMode == Sleep; }
 
 		  bool SetAutoModeActive(bool isActive)
 		  {
@@ -201,17 +112,27 @@ namespace Meltdown
 			  }
 			  return gAutoModeActive;
 		  }
-		  void SetAutoModeActive() { gAutoModeActive = MeltdownSerial.GetBoolValue(); }
 
 		  bool GetAutoModeActive() { return gAutoModeActive; }
+
+		  // SOLID COLOR //
+
+		  bool ToggleSolidColor()
+		  {
+			  gSolidColor = !gSolidColor;
+			  return gSolidColor;
+		  }
+		  void SetSolidColor() { gSolidColor = MeltdownSerial.GetBoolValue(); }
+
+		  bool GetSolidColor() { return gSolidColor; }
 
 		  // FRAME //
 
 		  void ResetFrame() { gFrame = 1; }
 
-		  void IncrementFrame()
+		  void IncrementFrame(float multiplier = 1)
 		  {
-			  gFrame++;
+			  gFrame += (GetFrameStep(multiplier));
 		  }
 
 		  void SetFrame() { gFrame = MeltdownSerial.GetValue(); }
@@ -226,6 +147,28 @@ namespace Meltdown
 		  }
 
 		  long GetFrame(long maxFrames) { return gFrame % maxFrames; }
+
+		  void ResetFrameStep()
+		  {
+			  SetFrameStep(1);
+		  }
+
+		  int GetFrameStep(float multiplier = 1)
+		  {
+			  // A value of less than zero indicates that we don't want to have any kind of modified increase, like in the case
+			  // of an especially long string of lights that would otherwise slow some patterns down.
+			  if (gFrameStep <= 0) return 1;
+
+			  return gFrameStep * multiplier;
+		  }
+
+		  void SetFrameStep(int val)
+		  {
+			  if (val < -1) val = -1;
+			  if (val == 0) val = 1;
+
+			  gFrameStep = val;
+		  }
 
 		  int GetFrameOffset(float multiplier) { return GetFrame() * multiplier; }
 
@@ -259,24 +202,10 @@ namespace Meltdown
 
 		  void GlitterEffect(CRGB leds[])
 		  {
-			  int chanceOfGlitter = GetAnalogEffect(25, 500);
+			  int chanceOfGlitter = 400;
 			  if (random8() < chanceOfGlitter)
 			  {
 				  SetRandomColor(leds, 3, CRGB::White);
-			  }
-		  }
-
-		  void HueIncrementEffect(CRGB leds[])
-		  {
-			  static int hue = 0;
-
-			  int effectVal = GetAnalogEffect(100, 500);
-			  EVERY_N_MILLIS(effectVal)
-			  {
-				  for (int i = 0; i < gNumLeds; i++)
-				  {
-					  // leds[i]
-				  }
 			  }
 		  }
 
@@ -329,14 +258,6 @@ namespace Meltdown
 			  for (int i = 0; i < gNumLeds; i++)
 			  {
 				  leds[i] = -leds[i];
-			  }
-		  }
-
-		  void MaximizeBrightness(CRGB leds[])
-		  {
-			  for (int i = 0; i < gNumLeds; i++)
-			  {
-				  (leds[i]).maximizeBrightness();
 			  }
 		  }
 
@@ -499,21 +420,18 @@ namespace Meltdown
 			  {
 			  case 0:
 				  return 0xBE00AE;	// Magenta
-				  //return CRGB::Red;
 			  case 1:
 				  return 0x3E00C3;	// Purple
-				  //return CRGB::Orange;
 			  case 2:
 				  return 0x08CFE2;	// Cyan
-				  //return CRGB::Yellow;
 			  case 3:
 				  return 0x37E600;	// Green
-				  //return CRGB::Green;
 			  case 4:
 				  return 0xFFFF00;	// Yellow
-				  //return CRGB::Blue;
 			  case 5:
 				  return 0xFF6200;	// Orange
+			  default:
+				  return 0xBE00AE;	// Magenta
 			  }
 		  }
 
@@ -524,14 +442,6 @@ namespace Meltdown
 
 		  PaletteData GetPalette(int8_t index)
 		  {
-			  /*CRGBPalette16 palettes[5] = {
-				  PartyColors_p,
-				  ForestColors_p,
-				  CloudColors_p,
-				  HeatColors_p,
-				  RainbowColors_p
-			  };*/
-
 			  PaletteData palettes[8] = {
 				  { Contrast_p, LINEARBLEND },
 				  { Cool_p, LINEARBLEND },
@@ -669,37 +579,6 @@ namespace Meltdown
 			  }
 		  }
 
-		  void HalloweenBlendColor(CRGB leds[])
-		  {
-			  int speed = beatsin8(48, 128, 255);
-
-			  // Modes
-			  HalloweenFillGradients(leds, GetModeNumber() + 3, speed);
-		  }
-
-		  void HalloweenFillGradients(CRGB leds[], int numGradients, int speed)
-		  {
-			  if (numGradients < 4) numGradients = 4;
-
-			  for (int i = 0; i < numGradients; i++)
-			  {
-				  CRGB color1 = CRGB(117, 0, 255);
-				  CRGB color2 = CRGB(90, 0, 138);
-				  CRGB color3 = CRGB(30, 0, 90);
-
-				  // Blend between two different colors over time.
-				  CRGB blend1 = blend(color1, color2, speed);
-				  CRGB blend2 = blend(color2, color3, speed);
-
-				  int startPos = (gNumLeds / numGradients) * i;
-				  if (startPos < 0) startPos = 0;
-				  int endPos = ((gNumLeds / numGradients) * (i + 1)) - 1;
-				  if (endPos < 1) endPos = 1;
-
-				  FillGradientRgb(leds, startPos, blend1, endPos, blend2);
-			  }
-		  }
-
 		  void SolidColors(CRGB leds[])
 		  {
 			  // Modes
@@ -744,21 +623,24 @@ namespace Meltdown
 		  {
 			  static int hue = 1;
 
+			  int deltaHue = GetAnalogPattern(1, 15);
+			  FillRainbow(leds, gHue + gPos + hue, deltaHue);
+
 			  // Modes
 			  switch (GetModeNumber())
 			  {
-			  case 0:
+			  case 1:
 				  // Increment the hue.
 				  hue++;
-				  FillRainbow(leds, gHue + gPos + hue, 127 / gNumLeds);
-				  break;
-			  case 1:
-				  hue++;
-				  FillRainbow(leds, gHue + gPos + hue, 255 / gNumLeds);
 				  break;
 			  case 2:
+				  // Invert rainbox colors.
+				  Invert(leds);
+				  break;
+			  case 3:
+				  // Invert rainbox colors and increment the hue.
+				  Invert(leds);
 				  hue++;
-				  FillRainbow(leds, gHue + gPos + hue, 511 / gNumLeds);
 				  break;
 			  }
 		  }
@@ -789,7 +671,8 @@ namespace Meltdown
 
 		  void Confetti(CRGB leds[])
 		  {
-			  FadeSetsToBlackBy(leds, 15);
+			  int fade = GetAnalogPattern(2, 30);
+			  FadeSetsToBlackBy(leds, fade);
 
 			  // Get some slight variation in the selected colors.
 			  int numColors = random8(4, 8);
@@ -830,30 +713,11 @@ namespace Meltdown
 			  counter++;
 		  }
 
-		  //void HalloweenConfetti(CRGB leds[])
-		  //{
-			 // int fade = GetAnalogPattern(2, 30);
-			 // FadeSetsToBlackBy(leds, fade);
-
-			 // // Modes
-			 // switch (GetModeNumber())
-			 // {
-			 // case 1:
-				//  SetRandomColor(leds, 6, 38, .8);	// Orange
-				//  break;
-			 // case 2:
-				//  SetRandomColor(leds, 3, 86, .8);	// Green	
-				//  break;
-			 // default:
-				//  SetRandomColor(leds, 5, 230, .8);	// Purple
-				//  break;
-			 // }
-		  //}
-
 		  void Sinelon(CRGB leds[])
 		  {
 			  // Display a dot moving back and forth in a sin wave pattern.
-			  FadeSetsToBlackBy(leds, 60);
+			  int fade = GetAnalogPattern(2, 30);
+			  FadeSetsToBlackBy(leds, fade);
 
 			  uint16_t index = beatsin16(8, 0, gNumLeds - 1);
 
@@ -863,7 +727,8 @@ namespace Meltdown
 		  void Bpm(CRGB leds[])
 		  {
 			  int bpm = 60;
-			  int beat = beatsin8(bpm, 0, 255);
+			  int beat = beatsin8(bpm, 63, 255);
+			  int multiplier = GetAnalogPattern(2, 12);
 			  PaletteData paletteData = GetRandomPalette();
 
 			  for (int i = 0; i < gNumLeds; i++)
@@ -874,8 +739,9 @@ namespace Meltdown
 
 		  void Juggle(CRGB leds[])
 		  {
+			  int fade = GetAnalogPattern(3, 100);
 			  // Eight colored dots, weaving in and out of sync with each other.
-			  FadeSetsToBlackBy(leds, 48);
+			  FadeSetsToBlackBy(leds, fade);
 
 			  int numBalls = 3;
 
@@ -916,33 +782,35 @@ namespace Meltdown
 
 		  void MeteorRain(CRGB leds[])
 		  {
+			  SetFrameStep(-1);
+
 			  const boolean meteorRandomDecay = true;
 
 			  // Medium meteor.
-			  /*int meteorSize = 25;
-			  gDelay = 15;*/
-			  // Large meteor.
-			  int meteorSize = 50;
-			  gDelay = 20;
+			  int meteorSize = 25;
+			  int frameMultiplier = 1;
+			  gDelay = 15;
 
-			  //// Modes
-			  //switch (GetModeNumber())
-			  //{
-				 // // Small meteors.
-				 // case 1:
-				 // {
-					//  meteorSize = 5;
-					//  gDelay = 7;
-					//  break;
-				 // }
-				 // // Large meteor.
-				 // case 2:
-				 // {
-					//  meteorSize = 50;
-					//  gDelay = 20;
-					//  break;
-				 // }
-			  //}
+			  // Modes
+			  switch (GetModeNumber())
+			  {
+				  // Small meteors.
+				  case 1:
+				  {
+					  meteorSize = 5;
+					  frameMultiplier = 1.5;
+					  gDelay = 7;
+					  break;
+				  }
+				  // Large meteor.
+				  case 2:
+				  {
+					  meteorSize = 50;
+					  frameMultiplier = 1;
+					  gDelay = 20;
+					  break;
+				  }
+			  }
 
 			  // Fade brightness all LEDs one step.
 			  for (int i = 0; i < gNumLeds; i++)
@@ -956,16 +824,69 @@ namespace Meltdown
 			  }
 
 			  // Draw meteor.
-			  long frame = GetFrame(gNumLeds);
+			  long frame = GetFrame(gNumLeds * frameMultiplier);
 			  for (int i = 0; i < meteorSize; i++)
 			  {
 				  if ((frame - i < gNumLeds) && (frame - i >= 0))
 				  {
 					  // Set the colors of the meteor using a reversed HeatColors gradient, so the meteor's tail is white hot trailing off to red.
-					  leds[frame - i] = ColorGradientFromPalette(GetRandomPalette().palette, meteorSize, i, 255, LINEARBLEND, true);
+					  leds[frame - i] = ColorGradientFromPalette(GetRandomPalette().palette, meteorSize, i, true);
 				  }
 			  }
 		  }
+
+		  //void MeteorRain(CRGB leds[])
+		  //{
+			 // const boolean meteorRandomDecay = true;
+
+			 // // Medium meteor.
+			 // /*int meteorSize = 25;
+			 // gDelay = 15;*/
+			 // // Large meteor.
+			 // int meteorSize = 50;
+			 // gDelay = 20;
+
+			 // //// Modes
+			 // //switch (GetModeNumber())
+			 // //{
+				// // // Small meteors.
+				// // case 1:
+				// // {
+				//	//  meteorSize = 5;
+				//	//  gDelay = 7;
+				//	//  break;
+				// // }
+				// // // Large meteor.
+				// // case 2:
+				// // {
+				//	//  meteorSize = 50;
+				//	//  gDelay = 20;
+				//	//  break;
+				// // }
+			 // //}
+
+			 // // Fade brightness all LEDs one step.
+			 // for (int i = 0; i < numLeds; i++)
+			 // {
+				//  if (!meteorRandomDecay || random(10) > 5)
+				//  {
+				//	  int meteorTrailDecay = GetAnalogPattern(32, 96);
+
+				//	  (leds[indexes[i]]).fadeToBlackBy(meteorTrailDecay);
+				//  }
+			 // }
+
+			 // // Draw meteor.
+			 // long frame = GetFrame(numLeds);
+			 // for (int i = 0; i < meteorSize; i++)
+			 // {
+				//  if ((frame - i < numLeds) && (frame - i >= 0))
+				//  {
+				//	  // Set the colors of the meteor using a reversed HeatColors gradient, so the meteor's tail is white hot trailing off to red.
+				//	  leds[frame - i] = ColorGradientFromPalette(GetRandomPalette().palette, meteorSize, i, 255, LINEARBLEND, true);
+				//  }
+			 // }
+		  //}
 
 		  void Checkers(CRGB leds[])
 		  {
@@ -990,7 +911,7 @@ namespace Meltdown
 
 		  void RunningLights(CRGB leds[])
 		  {
-			  int length = 4;
+			  int length = GetAnalogPattern(4, 40);
 
 			  for (int i = 0; i < gNumLeds; i++)
 			  {
@@ -1642,7 +1563,13 @@ namespace Meltdown
 
 		  float mapFloat(long x, long inMin, long inMax, long outMin, long outMax)
 		  {
-			  return (float)(x - inMin) * (outMax - outMin) / (float)(inMax - inMin) + outMin;
+			  float divisor = (float)(inMax - inMin) + outMin;
+			  if (divisor <= 0)
+			  {
+				  divisor = 1;
+			  }
+
+			  return (float)(x - inMin) * (outMax - outMin) / divisor;
 		  }
 	};
 

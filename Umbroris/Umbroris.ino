@@ -3,8 +3,10 @@
 #include <MeltdownLogger.h>
 #include <MobileMeltdown.h>
 
-// Boris, short for Explora Borealis, is an interactive light display
-// controlled by several individual user inputs.
+// Glow Worms is an interactive light display made of multiple vacuum tubes with LEDs and polyfil to create a cloudy effect inside.
+// It is controlled by several individual user inputs with a large number of combinations of effects possible.
+// 
+// Created by Kyle Hadley
 //
 // This project builds off of the FastLED library and some of its existing patterns
 // and examples.
@@ -13,69 +15,28 @@ namespace Meltdown
 {
 #define DEBUG true
 
-	// Circle Lamp
 #define LED_TYPE WS2812B 
-	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 92; const int gNumStrips = 3; const int gBrightness = 50; const EOrder gOrder = GRB; 
+	const uint8_t gDataPin = 0; 
+	const int gBrightness = 255; 
+	const EOrder gOrder = GRB;
 
-	// Neon Light
-//#define LED_TYPE WS2811 
-	//const uint8_t gDataPin = 11; const int gNumLedsPerStrip = 20; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; 
+#define NUM_STRIPS 5
+#define NUM_LEDS_PER_STRIP 170
+#define NUM_LEDS (NUM_STRIPS * NUM_LEDS_PER_STRIP)
 
-	// Christmas Bulbs
-//#define LED_TYPE WS2812B 
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 50; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
+#define BUTTON_PIN_1 1
+#define BUTTON_PIN_2 2
+#define BUTTON_PIN_3 3
+#define BUTTON_PIN_4 A4
 
-	// Christmas Bulbs XL
-//#define LED_TYPE WS2812B 
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 100; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = RGB;
+#define PATTERN_PIN			BUTTON_PIN_1
+#define MODE_PIN			BUTTON_PIN_2
+#define SOLID_COLOR_PIN		BUTTON_PIN_3
+#define ANALOG_PIN			BUTTON_PIN_4
 
-	// Umbrella
-//#define LED_TYPE WS2812B 
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 17; const int gNumStrips = 8; const int gBrightness = 110; const EOrder gOrder = GRB; 
-
-	// Umbrella XL
-//#define LED_TYPE WS2812B 
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 34; const int gNumStrips = 8; const int gBrightness = 110; const EOrder gOrder = GRB; 
-
-	// Arbitrary Config
-//#define LED_TYPE WS2812B
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 425; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; // Front window lights
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 300; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; // Office lights
-	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 53; const int gNumStrips = 1; const int gBrightness = 110; const EOrder gOrder = GRB; // Display case lights
-
-#define BUTTON_PIN_1 2
-#define BUTTON_PIN_2 3
-#define BUTTON_PIN_3 4
-
-#define PATTERN_PIN BUTTON_PIN_1
-#define MODE_PIN BUTTON_PIN_2
-#define EFFECT_PIN BUTTON_PIN_3
-
-	struct Button
-	{
-		int pin;
-		int state;
-		int previousState;
-		bool isToggle;
-		void(*callback)();
-
-		Button(int pin) : pin(pin), state{ HIGH }, previousState{ HIGH }, isToggle{ false }
-		{}
-	};
-
-	Button patternButton = { PATTERN_PIN };
-	Button modeButton = { MODE_PIN };
-	Button effectButton = { EFFECT_PIN };
-
-	CRGB leds[gNumLedsPerStrip * gNumStrips];
+CRGB leds[NUM_LEDS];
 
 #pragma region PATTERNS
-
-	void initLeds()
-	{
-		MobileMeltdown.SetNumLeds(gNumLedsPerStrip * gNumStrips);
-		MeltdownLogger.Debug(Serial, "Initializing LEDs...");
-	}
 
 	void initPattern()
 	{
@@ -89,6 +50,7 @@ namespace Meltdown
 		MeltdownLogger.Debug(Serial, "Initializing Mode...");
 	}
 
+	// TODO - Consider using effects, I'll need to think of more to make it worth it
 	void initEffect()
 	{
 		MobileMeltdown.SetEffectNumber(0);
@@ -101,7 +63,7 @@ namespace Meltdown
 		initMode();
 
 		// Set to black.
-		MobileMeltdown.SetAllColor(leds, CRGB::Black);
+		//MobileMeltdown.SetAllColor(leds, CRGB::Black); // <-- TODO - Does this look okay without the set to black?
 		MobileMeltdown.IncrementPatternNumber();
 		MeltdownLogger.Debug(Serial, "Next Pattern...");
 	}
@@ -118,19 +80,57 @@ namespace Meltdown
 		MeltdownLogger.Debug(Serial, "Next Effect...");
 	}
 
+	void toggleSolidColor()
+	{
+		MobileMeltdown.ToggleSolidColor();
+		MeltdownLogger.Debug(Serial, "Toggling Solid Color...");
+	}
+
+	void setAnalogPattern()
+	{
+		int currVal = MobileMeltdown.GetAnalogPattern();
+		int patternVal = MobileMeltdown.SetAnalogPattern(ANALOG_PIN);
+
+		if (MeltdownSerial.HasChanged(currVal, patternVal))
+		{
+			MeltdownLogger.Debug(Serial, "Setting Analog Pattern", patternVal);
+		}
+	}
+
+	void displayDebugColors()
+	{
+		int hueStep = 255 / NUM_STRIPS;
+
+		CHSV hsv;
+		hsv.hue = 0;
+		hsv.val = 255;
+		hsv.sat = 240;
+
+		for (int i = 0; i < NUM_STRIPS; i++)
+		{
+			for (int j = 0; j < NUM_LEDS_PER_STRIP; j++)
+			{
+				int hue = (i * hueStep) % 255;
+				hsv.hue = hue;
+
+				leds[j + (i * NUM_LEDS_PER_STRIP)] = hsv;
+			}
+		}
+	}
+
+#pragma endregion PATTERNS
+
+#pragma region AUTO MODE
+
+	void deactivateAutoMode()
+	{
+		MeltdownLogger.Debug(Serial, "Deactivating Auto Mode...");
+		MobileMeltdown.SetAutoModeActive(false);
+	}
+
 	void executeAutoMode()
 	{
-		if (!MobileMeltdown.GetAutoModeActive()) return;
-
-		if (MobileMeltdown.IsAutoPattern())
-		{
-			EVERY_N_SECONDS(15) { nextPattern(); }
-		}
-		else if (MobileMeltdown.IsAutoMode())
-		{
-			EVERY_N_SECONDS(10) { nextMode(); }
-		}
-		else if (MobileMeltdown.IsAutoPatternMode())
+		if (MobileMeltdown.GetAutoModeActive())
 		{
 			EVERY_N_SECONDS(30)
 			{
@@ -147,19 +147,25 @@ namespace Meltdown
 		}
 	}
 
-#pragma endregion PATTERNS
+#pragma endregion AUTO MODE
 
-#pragma region SET MODIFIERS
+#pragma region BUTTONS
 
-	void deactivateAutoMode()
+	struct Button
 	{
-		MeltdownLogger.Debug(Serial, "Deactivating Auto Mode...");
-		MobileMeltdown.SetAutoModeActive(false);
-	}
+		int pin;
+		int state;
+		int previousState;
+		bool isToggle;
+		void(*callback)();
 
-#pragma endregion SET MODIFIERS
+		Button(int pin) : pin(pin), state{ HIGH }, previousState{ HIGH }, isToggle{ false }
+		{}
+	};
 
-#pragma region INPUTS
+	Button patternButton = { PATTERN_PIN };
+	Button modeButton = { MODE_PIN };
+	Button solidColorButton = { SOLID_COLOR_PIN };
 
 	void checkButtonState(Button *button)
 	{
@@ -207,11 +213,17 @@ namespace Meltdown
 		{
 			checkButtonState(&patternButton);
 			checkButtonState(&modeButton);
-			checkButtonState(&effectButton);
+			checkButtonState(&solidColorButton);
 		}
 	}
 
-#pragma endregion INPUTS
+	void checkModifiers()
+	{
+		EVERY_N_MILLISECONDS(20)
+		{
+			setAnalogPattern();
+		}
+	}
 
 	void setupButtons()
 	{
@@ -219,15 +231,16 @@ namespace Meltdown
 		patternButton.isToggle = true;
 		modeButton.callback = nextMode;
 		modeButton.isToggle = true;
-		effectButton.callback = nextEffect;
-		effectButton.isToggle = true;
+		solidColorButton.callback = toggleSolidColor;
+		solidColorButton.isToggle = false;
 	}
+
+#pragma endregion BUTTONS
 
 	void executeSetup()
 	{
 		// initialize serial communication at 9600 bits per second:
 		Serial.begin(9600);
-		//Serial1.begin(9600);
 
 		Serial.println("Serial port opened.");
 
@@ -239,18 +252,18 @@ namespace Meltdown
 
 		setupButtons();
 
-		MobileMeltdown.SetAutoMode(MobileMeltdown.PatternMode);
+		MobileMeltdown.SetAutoModeActive(true);
 
-		pinMode(BUTTON_PIN_1, INPUT_PULLUP);
-		pinMode(BUTTON_PIN_2, INPUT_PULLUP);
-		pinMode(BUTTON_PIN_3, INPUT_PULLUP);
+		pinMode(PATTERN_PIN, INPUT_PULLUP);
+		pinMode(MODE_PIN, INPUT_PULLUP);
+		pinMode(SOLID_COLOR_PIN, INPUT_PULLUP);
+		pinMode(ANALOG_PIN, INPUT);
 
-		initLeds();
 		initPattern();
 		initMode();
-		initEffect();
+		initEffect(); 
 
-		FastLED.addLeds<LED_TYPE, gDataPin, gOrder>(leds, gNumLedsPerStrip * gNumStrips);
+		FastLED.addLeds<LED_TYPE, gDataPin, gOrder>(leds, NUM_LEDS);
 
 		LEDS.setBrightness(gBrightness);
 	}
@@ -258,18 +271,28 @@ namespace Meltdown
 	void executeLoop()
 	{
 		checkButtonStates();
+		checkModifiers();
 
 		if (MobileMeltdown.GetAutoModeActive())
 		{
 			executeAutoMode();
 		}
+		else if (MobileMeltdown.GetSolidColor())
+		{
+			MobileMeltdown.SetAllColor(leds, CRGB::Black);
+		}
+		else
+		{
+			MobileMeltdown.ExecutePattern(leds);
+			MobileMeltdown.ExecuteEffect(leds);
 
-		MobileMeltdown.ExecutePattern(leds);
-		MobileMeltdown.ExecuteEffect(leds);
+			//MobileMeltdown.IncrementFrame(1.5f);
+		}
 
-		MobileMeltdown.IncrementFrame();
-
-		delay(10);
+		if (MobileMeltdown.GetDelay() > 0)
+		{
+			delay(MobileMeltdown.GetDelay());
+		}
 
 		LEDS.show();
 	}
