@@ -23,7 +23,7 @@ namespace Meltdown
 
 	struct PaletteData
 	{
-		CRGBPalette16 palette;
+		TProgmemRGBPalette16 palette;
 		TBlendType blendType;
 	};
 
@@ -42,13 +42,13 @@ namespace Meltdown
 		  int gLastRandomPaletteNumber = 0;
 		  int gRandomPaletteNumber = 0;
 
-		  int gBrightness = 48;
+		  int gBrightness = 255;
 		  int gHue = 0;
 		  int gDelay = 0;
 		  long gAnalogPattern = 0;
 		  long gAnalogEffect = 0;
 		  long gPos = 0;
-		  long gFade = 20;
+		  long gFade = 150;
 		  long gFrame = 1;
 		  int gFrameStep = 1;
 		  bool gInverse = false;
@@ -56,7 +56,7 @@ namespace Meltdown
 		  bool gAutoModeActive = false;
 
 		  enum AutoMode { None, Sleep, Pattern, Mode, PatternMode };
-		  AutoMode gAutoMode = None;
+		  AutoMode gAutoMode = PatternMode;
 
 		  unsigned long gCurrentMillis;
 		  // The millis at the time that the auto mode timer started.
@@ -814,7 +814,7 @@ namespace Meltdown
 			  int space = 40;
 			  int width = 8;
 			  // Fade value.
-			  int fade = 36;
+			  int fade = 10;
 
 			  FadeSetsToBlackBy(leds, fade);
 
@@ -922,8 +922,8 @@ namespace Meltdown
 			  /*int meteorSize = 25;
 			  gDelay = 15;*/
 			  // Large meteor.
-			  int meteorSize = 50;
-			  gDelay = 20;
+			  int meteorSize = 250;
+			  gDelay = 0;
 
 			  //// Modes
 			  //switch (GetModeNumber())

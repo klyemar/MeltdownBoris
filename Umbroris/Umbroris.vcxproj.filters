@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Umbroris.ino" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="__vm\.Umbroris.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -29,5 +26,8 @@
     <ClInclude Include="..\libraries\MobileMeltdown\MobileMeltdown.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Umbroris.ino" />
   </ItemGroup>
 </Project>
