@@ -69,15 +69,15 @@ namespace Meltdown
 			  //{ 10, &CMobileMeltdown::SolidColors },
 			  //{ 3, &CMobileMeltdown::RainbowFull },
 
+			  { 3, &CMobileMeltdown::Orbital },
+			  { 4, &CMobileMeltdown::BlendColor },
 			  { 4, &CMobileMeltdown::Sinelon },
 			  { 3, &CMobileMeltdown::Bpm },
 			  { 2, &CMobileMeltdown::MeteorRain },
-			  { 3, &CMobileMeltdown::Orbital },
 			  { 2, &CMobileMeltdown::Rainbow },
 			  { 4, &CMobileMeltdown::RunningLights },
-			  { 3, &CMobileMeltdown::Juggle },
+			  { 2, &CMobileMeltdown::Juggle },
 			  { 3, &CMobileMeltdown::Confetti },
-			  { 4, &CMobileMeltdown::BlendColor },
 		  };
 
 		  // List of effects to cycle through.  Each is defined as a separate function below.
@@ -228,6 +228,8 @@ namespace Meltdown
 		  long GetFrame(long maxFrames) { return gFrame % maxFrames; }
 
 		  int GetFrameOffset(float multiplier) { return GetFrame() * multiplier; }
+
+		  int GetFrameOffset(float multiplier, long maxFrames) { return GetFrame(maxFrames) * multiplier; }
 
 #pragma region EFFECTS
 
@@ -517,36 +519,28 @@ namespace Meltdown
 			  }
 		  }
 
-		  PaletteData GetPalette()
+		  CRGBPalette16 GetPalette()
 		  {
 			  return GetPalette(gCurrentModeNumber);
 		  }
 
-		  PaletteData GetPalette(int8_t index)
+		  CRGBPalette16 GetPalette(int8_t index)
 		  {
-			  /*CRGBPalette16 palettes[5] = {
+			  CRGBPalette16 palettes[8] = {
+				  Contrast_p,
+				  Cool_p,
+				  Neon_p,
+				  Warm_p,
+				  Cyberpunk_p,
+				  Rainbow_p,
 				  PartyColors_p,
-				  ForestColors_p,
-				  CloudColors_p,
-				  HeatColors_p,
 				  RainbowColors_p
-			  };*/
-
-			  PaletteData palettes[8] = {
-				  { Contrast_p, LINEARBLEND },
-				  { Cool_p, LINEARBLEND },
-				  { Neon_p, LINEARBLEND },
-				  { Warm_p, LINEARBLEND },
-				  { Cyberpunk_p, LINEARBLEND },
-				  { Rainbow_p, LINEARBLEND },
-				  { PartyColors_p, LINEARBLEND },
-				  { RainbowColors_p, LINEARBLEND }
 			  };
 
 			  return palettes[index % ARRAY_SIZE(palettes)];
 		  }
 
-		  PaletteData GetRandomPalette()
+		  CRGBPalette16 GetRandomPalette()
 		  {
 			  return GetPalette(gRandomPaletteNumber);
 		  }
@@ -639,7 +633,7 @@ namespace Meltdown
 
 		  void BlendColor(CRGB leds[])
 		  {
-			  int speed = beatsin8(GetAnalogPattern(16, 48), 0, 255);
+			  int speed = beatsin8(24, 0, 255);
 
 			  // Modes
 			  FillGradients(leds, GetModeNumber() + 1, speed);
@@ -789,17 +783,14 @@ namespace Meltdown
 
 		  void Confetti(CRGB leds[])
 		  {
-			  FadeSetsToBlackBy(leds, 15);
+			  FadeSetsToBlackBy(leds, 2);
 
 			  // Get some slight variation in the selected colors.
-			  int numColors = random8(4, 8);
+			  int numColors = random8(4, 6);
 			  // Get a random palette to select our colors.
-			  PaletteData paletteData = GetRandomPalette();
+			  CRGBPalette16 palette = GetRandomPalette();
 
-			  for (int i = 0; i < numColors; i++)
-			  {
-				  SetRandomColor(leds, ColorGradientFromPalette(paletteData.palette, numColors, i, random8(64, 195)), 1, .3);
-			  }
+			  SetRandomColor(leds, ColorGradientFromPalette(palette, numColors, GetFrameOffset(.005), random8(64, 195)), 1, .3);
 		  }
 
 		  void Orbital(CRGB leds[])
@@ -807,14 +798,14 @@ namespace Meltdown
 			  static int counter = 0;
 
 			  // The speed to shift the gradient.
-			  float gradientMultiplier = 1.5;
+			  float gradientMultiplier = .2;
 			  // The speed to shift the position.
-			  float posMultiplier = .4;
+			  float posMultiplier = .2;
 			  // The pixel values.
-			  int space = 40;
-			  int width = 8;
+			  int space = 8;
+			  int width = 4;
 			  // Fade value.
-			  int fade = 10;
+			  int fade = 30;
 
 			  FadeSetsToBlackBy(leds, fade);
 
@@ -823,7 +814,7 @@ namespace Meltdown
 				  // Effectively, make a solid block that is 'width' pixels wide with a 'space' pixel wide gap in between.
 				  if ((i + GetFrameOffset(posMultiplier)) % (space + width) < width)
 				  {
-					  leds[i] = ColorGradientFromPalette(GetRandomPalette().palette, gNumLeds, i + GetFrameOffset(gradientMultiplier));
+					  leds[i] = ColorGradientFromPalette(GetRandomPalette(), gNumLeds, GetFrameOffset(gradientMultiplier));
 				  }
 			  }
 
@@ -853,29 +844,29 @@ namespace Meltdown
 		  void Sinelon(CRGB leds[])
 		  {
 			  // Display a dot moving back and forth in a sin wave pattern.
-			  FadeSetsToBlackBy(leds, 60);
+			  FadeSetsToBlackBy(leds, 10);
 
-			  uint16_t index = beatsin16(8, 0, gNumLeds - 1);
+			  uint16_t index = beatsin16(16, 0, gNumLeds - 1);
 
 			  GenerateSinelons(leds, GetModeNumber() + 2, index);
 		  }
 
 		  void Bpm(CRGB leds[])
 		  {
-			  int bpm = 60;
+			  int bpm = 30;
 			  int beat = beatsin8(bpm, 0, 255);
-			  PaletteData paletteData = GetRandomPalette();
+			  CRGBPalette16 palette = GetRandomPalette();
 
 			  for (int i = 0; i < gNumLeds; i++)
 			  {
-				  leds[i] = ColorGradientFromPalette(paletteData.palette, gNumLeds, i + GetFrameOffset(.35), beat - (i * 10), paletteData.blendType);
+				  leds[i] = ColorGradientFromPalette(palette, gNumLeds, i + GetFrameOffset(.35), beat - (i * 10), LINEARBLEND);
 			  }
 		  }
 
 		  void Juggle(CRGB leds[])
 		  {
 			  // Eight colored dots, weaving in and out of sync with each other.
-			  FadeSetsToBlackBy(leds, 48);
+			  FadeSetsToBlackBy(leds, 100);
 
 			  int numBalls = 3;
 
@@ -888,14 +879,11 @@ namespace Meltdown
 			  case 2:
 				  numBalls = 5;
 				  break;
-			  case 3:
-				  numBalls = 6;
-				  break;
 			  }
 
 			  for (int i = 0; i < numBalls; i++)
 			  {
-				  leds[beatsin16(i + 5, 0, gNumLeds - 1)] = GetRainbowColor(i + 4);
+				  leds[beatsin16(i + 10, 0, gNumLeds - 1)] = GetRainbowColor(i);
 			  }
 		  }
 
@@ -923,7 +911,7 @@ namespace Meltdown
 			  gDelay = 15;*/
 			  // Large meteor.
 			  int meteorSize = 250;
-			  gDelay = 0;
+			  gDelay = 30;
 
 			  //// Modes
 			  //switch (GetModeNumber())
@@ -962,9 +950,11 @@ namespace Meltdown
 				  if ((frame - i < gNumLeds) && (frame - i >= 0))
 				  {
 					  // Set the colors of the meteor using a reversed HeatColors gradient, so the meteor's tail is white hot trailing off to red.
-					  leds[frame - i] = ColorGradientFromPalette(GetRandomPalette().palette, meteorSize, i, 255, LINEARBLEND, true);
+					  leds[frame - i] = ColorGradientFromPalette(GetRandomPalette(), meteorSize, i, 255, LINEARBLEND, true);
 				  }
 			  }
+
+			  delay(gDelay);
 		  }
 
 		  void Checkers(CRGB leds[])
@@ -1003,7 +993,7 @@ namespace Meltdown
 				  {
 					  case 1:
 					  {
-						  redSin = (i * length) + (float)GetFrame() / 1.5;
+						  redSin = (i * length) + (float)GetFrame() / 3.5;
 						  greenSin = (i * length) + (float)GetFrame();
 						  blueSin = (i * length) + (float)GetFrame() / 3;
 						  break;
@@ -1038,8 +1028,8 @@ namespace Meltdown
 					  }
 				  }
 
-				  float speedMultiplier = 3.5;
-				  byte redMult = sin8(redSin * speedMultiplier);
+				  float speedMultiplier = 1.5;
+				  byte redMult = sin8(redSin * speedMultiplier * .5);
 				  byte greenMult = sin8(greenSin * speedMultiplier);
 				  byte blueMult = sin8(blueSin * speedMultiplier);
 
@@ -1159,6 +1149,7 @@ namespace Meltdown
 			  0x3E00C3,	// Purple
 			  0x3E00C3,	// Purple
 			  0x3E00C3,	// Purple
+			  0x37E600,	// Green
 			  0x37E600,	// Green
 			  0x37E600,	// Green
 			  0x37E600,	// Green

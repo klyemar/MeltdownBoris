@@ -13,9 +13,17 @@ namespace Meltdown
 {
 #define DEBUG true
 
-	// Circle Lamp
+	// XS Circle Lamp
 #define LED_TYPE WS2812B 
-	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 92; const int gNumStrips = 3; const int gBrightness = 50; const EOrder gOrder = GRB; 
+	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 37; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB;
+
+	// Small Circle Lamp
+//#define LED_TYPE WS2812B 
+//	const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 60; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB;
+
+	// Large Circle Lamp
+//#define LED_TYPE WS2812B 
+	//const uint8_t gDataPin = 0; const int gNumLedsPerStrip = 92; const int gNumStrips = 1; const int gBrightness = 50; const EOrder gOrder = GRB;
 
 	// Neon Light
 //#define LED_TYPE WS2811 
@@ -132,7 +140,7 @@ namespace Meltdown
 		}
 		else if (MobileMeltdown.IsAutoPatternMode())
 		{
-			EVERY_N_SECONDS(30)
+			EVERY_N_SECONDS(60)
 			{
 				// If we've reached the limit of modes for this pattern, get the next pattern.
 				if (MobileMeltdown.GetModeNumber() >= MobileMeltdown.GetNumModes())

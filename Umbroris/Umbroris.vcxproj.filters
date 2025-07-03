@@ -14,9 +14,6 @@
     <ClInclude Include="__vm\.Umbroris.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\libraries\FastLED\FastLED.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\libraries\MeltdownLogger\MeltdownLogger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
